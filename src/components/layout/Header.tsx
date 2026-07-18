@@ -50,7 +50,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
               onClick={() => setShowProfileMenu(!showProfileMenu)}
               className="flex items-center gap-2 p-1.5 hover:bg-background transition-colors"
             >
-              <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-secondary font-semibold text-sm">
+              <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-white font-semibold text-sm">
                 {user?.name?.charAt(0).toUpperCase() || 'A'}
               </div>
               <div className="hidden md:block text-left">

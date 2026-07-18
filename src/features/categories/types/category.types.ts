@@ -2,7 +2,7 @@ export interface CategoryFormValues {
   name: string;
   slug: string;
   description: string;
+  parentCategory: string;
   isActive: boolean;
-  order: number;
-  showOnHomePage: boolean;
+  isFeatured: boolean;
 }

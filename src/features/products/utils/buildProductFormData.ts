@@ -1,5 +1,6 @@
 import { appendIfExists } from '@/utils/formDataBuilder';
 import type { ProductFormValues } from '../validation/product.validation';
+import type { ProductImage } from '../components/ProductImagesCard';
 
 export type ProductImageSlot = 'image1' | 'image2' | 'image3' | 'image4';
 
@@ -10,13 +11,9 @@ export const PRODUCT_IMAGE_SLOTS: ProductImageSlot[] = [
   'image4',
 ];
 
-interface ProductFiles {
-  images: Partial<Record<ProductImageSlot, File | null>>;
-}
-
 export function buildProductFormData(
   values: ProductFormValues,
-  files: ProductFiles
+  images: ProductImage[]
 ) {
   const formData = new FormData();
 
@@ -45,10 +42,9 @@ export function buildProductFormData(
   );
   formData.append('variants', JSON.stringify(variants));
 
-  PRODUCT_IMAGE_SLOTS.forEach((slot) => {
-    const file = files.images[slot];
-    if (file) {
-      formData.append(slot, file);
+  images.slice(0, 4).forEach((image, index) => {
+    if (image.file) {
+      formData.append(PRODUCT_IMAGE_SLOTS[index], image.file);
     }
   });
 

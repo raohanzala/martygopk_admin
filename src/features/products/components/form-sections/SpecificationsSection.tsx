@@ -14,6 +14,8 @@ export default function SpecificationsSection() {
       <DynamicFieldArray
         name="specifications"
         defaultItem={DEFAULT_SPEC}
+        addLabel="Add specification"
+        emptyMessage="No specifications yet. Add key/value pairs for this product."
         renderFields={(index) => (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <FormRowVertical

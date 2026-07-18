@@ -65,13 +65,13 @@
 
 @theme {
   /* 🟡 Brand / Primary - Gold (matching website) */
-  --color-primary: #cba135;
+  --color-primary: #2663EB;
 
   /* 🖤 Dark / Secondary - Dark Gray (matching navigation) */
   --color-secondary: #1a1a1a;
 
   /* 🧱 Backgrounds */
-  --color-background: #f8fafc;
+  --color-background: #F9FAFC;
   --color-surface: #ffffff;
 
   /* 📏 Borders */

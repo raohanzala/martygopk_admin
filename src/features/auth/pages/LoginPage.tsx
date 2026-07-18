@@ -25,6 +25,8 @@ export default function LoginPage() {
           <h1 className="text-2xl font-semibold text-text-primary mb-2">
             Admin Panel
           </h1>
+
+          <img src="../logo.png" alt="Logo" width={100} height={100} />
           <p className="text-sm text-text-muted">
             Sign in to manage your store
           </p>
@@ -41,7 +43,7 @@ export default function LoginPage() {
                 name="email"
                 label="Email"
                 type="email"
-                placeholder="admin@luxurywatches.com"
+                placeholder="admin@example.com"
                 required
               />
               <Input

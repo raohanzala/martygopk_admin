@@ -24,10 +24,10 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     },
     ref
   ) => {
-    const baseStyles = 'inline-flex items-center cursor-pointer text-nowrap justify-center font-medium rounded transition-all duration-150 focus:outline-none focus:ring-1 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed';
+    const baseStyles = 'inline-flex items-center cursor-pointer text-nowrap justify-center font-medium rounded-md transition-all duration-150 focus:outline-none focus:ring-1 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed';
 
     const variants = {
-      primary: 'bg-secondary text-gray-100 hover:bg-secondary/95 focus:ring-gray-100 border border-gray-100',
+      primary: 'bg-primary text-white hover:bg-primary/95 focus:ring-primary border border-primary',
       secondary: 'bg-secondary text-white hover:bg-secondary/95 focus:ring-secondary border border-secondary',
       outline: 'border border-border text-text-primary bg-surface hover:bg-background focus:ring-primary',
       ghost: 'text-text-primary hover:bg-background focus:ring-primary',

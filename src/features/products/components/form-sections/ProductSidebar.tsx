@@ -1,5 +1,5 @@
 import { useFormContext } from 'react-hook-form';
-import { Card } from '@/components';
+import { Card, Select } from '@/components';
 import FormRowVertical from '@/components/form/FormRowVertical';
 import Input from '@/components/form/Input';
 import { useCategories } from '@/features/categories/hooks/useCategories';
@@ -35,14 +35,11 @@ const ProductSidebar = () => {
       <Card title="Organization">
         <div className="space-y-4">
           <FormRowVertical label="Category" name="category" required>
-            <select {...register('category')} className={selectClassName} id="category">
-              <option value="">Select category</option>
-              {categories.map((c: { _id: string; name: string }) => (
-                <option key={c._id} value={c._id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+            <Select name="category" options={categories.map((c: { _id: string; name: string }) => ({
+              value: c._id,
+              label: c.name,
+            }))} 
+            placeholder="Select a category" />
           </FormRowVertical>
 
           <FormRowVertical label="Sub category" name="subCategory">
@@ -50,29 +47,20 @@ const ProductSidebar = () => {
           </FormRowVertical>
 
           <FormRowVertical label="Brand" name="brand">
-            <select {...register('brand')} className={selectClassName} id="brand">
-              <option value="">No Brand</option>
-              {brands.map((b: { _id: string; name: string }) => (
-                <option key={b._id} value={b.name}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
+            <Select name="brand" 
+            options={brands.map((b: { _id: string; name: string }) => ({
+              value: b._id,
+              label: b.name,
+            }))} 
+            placeholder="Select a brand" />
           </FormRowVertical>
         </div>
       </Card>
 
       <Card title="Availability">
         <FormRowVertical label="Status" name="availability">
-          <select
-            {...register('availability')}
-            className={selectClassName}
-            id="availability"
-          >
-            <option value="In Stock">In Stock</option>
-            <option value="Out of Stock">Out of Stock</option>
-            <option value="Pre Order">Pre Order</option>
-          </select>
+
+          <Select name="availability" options={[{ value: 'In Stock', label: 'In Stock' }, { value: 'Out of Stock', label: 'Out of Stock' }, { value: 'Pre Order', label: 'Pre Order' }]} placeholder="Select a status" />
         </FormRowVertical>
       </Card>
 

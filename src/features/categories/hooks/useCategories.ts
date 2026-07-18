@@ -8,9 +8,15 @@ export function useCategories(search?: string, isActive?: boolean) {
     data,
   } = useQuery({
     queryKey: ['categories', search, isActive],
-    queryFn: () => getCategoriesApi({ search, isActive }),
+    queryFn: () =>
+      getCategoriesApi({
+        search,
+        isActive,
+        page: 1,
+        pageSize: 100,
+      }),
   });
 
-  const { categories } = data || {};
-  return { categories: categories || [], isCategoriesLoading, categoriesError };
+  const categories = data?.categories ?? [];
+  return { categories, isCategoriesLoading, categoriesError, pagination: data };
 }

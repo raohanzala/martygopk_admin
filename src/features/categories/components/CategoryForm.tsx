@@ -1,11 +1,72 @@
-import { Formik, Form } from 'formik';
-import { useRef, useState } from 'react';
-import { categorySchema } from '@/validation';
-import { Button, Card, Input, Textarea, Checkbox } from '@/components';
-import type { CategoryFormValues } from '../types/category.types';
-import type { Category } from '@/api/categories';
-import { buildCategoryFormData } from '../utils/buildCategoryFormData';
-import { IoImageOutline, IoClose } from 'react-icons/io5';
+import { useEffect, useMemo, useState } from "react";
+import { useForm, type Resolver } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { Button, Card, Select } from "@/components";
+import Form from "@/components/form/Form";
+import FormRowVertical from "@/components/form/FormRowVertical";
+import Input from "@/components/form/Input";
+import Textarea from "@/components/form/Textarea";
+import { getAllCategoriesApi, type Category } from "@/api/categories";
+import type { ProductImage } from "@/features/products/components/ProductImagesCard";
+import type { CategoryFormValues } from "../types/category.types";
+import {
+  CATEGORY_FORM_DEFAULTS,
+  categoryFormSchema,
+} from "../validation/category.validation";
+import { buildCategoryFormData } from "../utils/buildCategoryFormData";
+import CategoryImageCard from "./CategoryImageCard";
+
+function getCategoryImageUrl(image: Category["image"]): string | null {
+  if (!image) return null;
+  if (typeof image === "string") {
+    if (!image) return null;
+    if (image.startsWith("http") || image.startsWith("data:")) return image;
+    const base =
+      import.meta.env.VITE_API_URL?.replace("/api", "") ||
+      "http://localhost:3002";
+    return `${base}${image}`;
+  }
+  if (image.url) {
+    if (image.url.startsWith("http") || image.url.startsWith("data:"))
+      return image.url;
+    const base =
+      import.meta.env.VITE_API_URL?.replace("/api", "") ||
+      "http://localhost:3002";
+    return `${base}${image.url}`;
+  }
+  return null;
+}
+
+function mapCategoryToFormValues(
+  category?: Category | null,
+): CategoryFormValues {
+  if (!category) return CATEGORY_FORM_DEFAULTS;
+  return {
+    name: category.name || "",
+    slug: category.slug || "",
+    description: category.description || "",
+    parentCategory:
+      typeof category.parentCategory === "string"
+        ? category.parentCategory
+        : "",
+    isActive: category.isActive ?? true,
+    isFeatured: category.isFeatured ?? false,
+  };
+}
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9 -]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+const selectClassName =
+  "w-full text-sm px-4 py-[10px] border border-border bg-bg-main text-text-primary rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all duration-200";
 
 interface CategoryFormProps {
   categoryToEdit?: Category | null;
@@ -18,182 +79,175 @@ const CategoryForm: React.FC<CategoryFormProps> = ({
   onSubmit,
   isSubmitting,
 }) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(
-    categoryToEdit?.image || null
+  const navigate = useNavigate();
+  const isCreate = !categoryToEdit;
+
+  const [image, setImage] = useState<ProductImage | null>(() => {
+    const url = getCategoryImageUrl(categoryToEdit?.image);
+    return url ? { id: "existing", preview: url } : null;
+  });
+  const [imageError, setImageError] = useState("");
+  const [slugTouched, setSlugTouched] = useState(Boolean(categoryToEdit?.slug));
+
+  const methods = useForm<CategoryFormValues>({
+    resolver: zodResolver(categoryFormSchema) as Resolver<CategoryFormValues>,
+    defaultValues: CATEGORY_FORM_DEFAULTS,
+  });
+
+  const { reset, watch, setValue, register } = methods;
+  const nameValue = watch("name");
+
+  const { data: allCategories = [] } = useQuery({
+    queryKey: ["categories-all"],
+    queryFn: getAllCategoriesApi,
+  });
+
+  const parentOptions = useMemo(
+    () => allCategories.filter((c) => c._id !== categoryToEdit?._id),
+    [allCategories, categoryToEdit?._id],
   );
 
-  const initialValues: CategoryFormValues = {
-    name: categoryToEdit?.name || '',
-    slug: categoryToEdit?.slug || '',
-    description: categoryToEdit?.description || '',
-    isActive: categoryToEdit?.isActive ?? true,
-    order: categoryToEdit?.order ?? 0,
-    showOnHomePage: categoryToEdit?.showOnHomePage ?? false,
-  };
+  useEffect(() => {
+    reset(mapCategoryToFormValues(categoryToEdit));
+    const url = getCategoryImageUrl(categoryToEdit?.image);
+    setImage(url ? { id: "existing", preview: url } : null);
+    setSlugTouched(Boolean(categoryToEdit?.slug));
+    setImageError("");
+  }, [categoryToEdit, reset]);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => setImagePreview(reader.result as string);
-      reader.readAsDataURL(file);
+  useEffect(() => {
+    if (!slugTouched && isCreate && nameValue) {
+      setValue("slug", slugify(nameValue), { shouldValidate: true });
     }
-  };
-
-  const clearImage = () => {
-    setImageFile(null);
-    setImagePreview(categoryToEdit?.image || null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
+  }, [nameValue, slugTouched, isCreate, setValue]);
 
   const handleSubmit = (values: CategoryFormValues) => {
-    const formData = buildCategoryFormData(values, { image: imageFile });
-    onSubmit(values, formData);
+    if (isCreate && !image?.file) {
+      setImageError("Category image is required");
+      return;
+    }
+    setImageError("");
+    onSubmit(
+      values,
+      buildCategoryFormData(values, { image: image?.file ?? null }),
+    );
   };
 
-  const isCreate = !categoryToEdit;
-  const hasImage = imagePreview || (isCreate && imageFile);
-
   return (
-    <Formik<CategoryFormValues>
-      initialValues={initialValues}
-      validationSchema={categorySchema}
+    <Form
+      methods={methods}
       onSubmit={handleSubmit}
+      disabled={isSubmitting}
+      className="space-y-6"
     >
-      <Form className="space-y-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            <Card title="Basic Information">
-              <div className="space-y-4">
-                <Input
-                  name="name"
-                  label="Category name"
-                  placeholder="e.g. Luxury Watches"
-                  required
-                />
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-semibold text-text-primary">
+            Add category
+          </h1>
+          <p className="text-sm text-text-muted mt-1">
+            Create a new product category
+          </p>
+        </div>
+      <div className="flex justify-end gap-3">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => navigate("/categories")}
+          disabled={isSubmitting}
+          >
+          Discard
+        </Button>
+        <Button
+          type="submit"
+          isLoading={isSubmitting}
+          disabled={isCreate && !image}
+          >
+          {isCreate ? "Create category" : "Save changes"}
+        </Button>
+          </div>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <Card title="Basic Information">
+            <div className="space-y-4">
+              <FormRowVertical label="Category name" name="name" required>
+                <Input name="name" placeholder="e.g. Luxury Watches" />
+              </FormRowVertical>
+
+              <FormRowVertical
+                label="URL slug"
+                name="slug"
+                required
+                helperText="Storefront: /products/category/your-slug"
+              >
                 <Input
                   name="slug"
-                  label="URL slug"
-                  placeholder="e.g. luxury-watches (optional — generated from name if empty)"
+                  placeholder="e.g. luxury-watches"
+                  onFocus={() => setSlugTouched(true)}
                 />
-                <p className="text-xs text-text-muted -mt-2">
-                  Storefront: /products/category/your-slug
-                </p>
+              </FormRowVertical>
+
+              <FormRowVertical label="Description" name="description">
                 <Textarea
                   name="description"
-                  label="Description"
-                  placeholder="Brief description of this category"
                   rows={4}
+                  placeholder="Brief description of this category"
                 />
-                <Checkbox
-                  name="isActive"
-                  label="Active (visible on storefront)"
-                />
-                <Input
-                  name="order"
-                  type="number"
-                  label="Display order"
-                  placeholder="0"
-                  min={0}
-                  title="Lower numbers appear first. Used for sorting on home page and lists."
-                />
-                <Checkbox
-                  name="showOnHomePage"
-                  label="Show on home page (category section)"
-                />
-              </div>
-            </Card>
-          </div>
+              </FormRowVertical>
 
-          <div className="space-y-6">
-            <Card title="Image">
-              <div className="space-y-4">
-                {imagePreview ? (
-                  <div className="relative inline-block">
-                    <img
-                      src={
-                        imagePreview.startsWith('data:') ||
-                        imagePreview.startsWith('http')
-                          ? imagePreview
-                          : `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}${imagePreview}`
-                      }
-                      alt="Category"
-                      className="w-40 h-40 object-cover rounded border border-border"
-                    />
-                    <button
-                      type="button"
-                      onClick={clearImage}
-                      className="absolute -top-2 -right-2 p-1 bg-error text-white rounded hover:bg-error/90"
-                      aria-label="Remove image"
-                    >
-                      <IoClose className="w-4 h-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-border rounded cursor-pointer hover:bg-background transition-colors">
-                    <IoImageOutline className="w-10 h-10 text-text-muted mb-2" />
-                    <span className="text-sm text-text-muted mb-1">
-                      Add category image
-                    </span>
-                    <span className="text-xs text-text-muted">
-                      JPG, PNG (max 5MB)
-                    </span>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      className="hidden"
-                      accept="image/*"
-                      onChange={handleImageChange}
-                    />
-                  </label>
-                )}
-                {imagePreview && (
-                  <div className="flex gap-2">
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      className="hidden"
-                      accept="image/*"
-                      onChange={handleImageChange}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      Replace image
-                    </Button>
-                  </div>
-                )}
-                {isCreate && !hasImage && (
-                  <p className="text-xs text-error">
-                    Category image is required
-                  </p>
-                )}
-              </div>
-            </Card>
-          </div>
+              <FormRowVertical label="Parent category" name="parentCategory">
+                <Select
+                name="parentCategory"
+                options={parentOptions.map((c) => ({
+                  value: c._id,
+                  label: c.name,
+                }))}
+                placeholder="Select a parent category"
+                />
+              </FormRowVertical>
+            </div>
+          </Card>
         </div>
 
-        <div className="flex justify-end gap-3 pt-4 border-t border-border">
-          <Button type="button" variant="outline">
-            Discard
-          </Button>
-          <Button
-            type="submit"
-            isLoading={isSubmitting}
-            disabled={isCreate && !imageFile}
-          >
-            {isCreate ? 'Create category' : 'Save changes'}
-          </Button>
+        <div className="space-y-6">
+          <CategoryImageCard
+            image={image}
+            onImageChange={(next) => {
+              setImage(next);
+              if (next) setImageError("");
+            }}
+            required={isCreate}
+            error={imageError}
+          />
+          <Card title="Visibility">
+            <div className="space-y-3">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  {...register("isActive")}
+                  className="w-4 h-4 rounded border-border text-primary focus:ring-2 focus:ring-primary/30"
+                />
+                <span className="text-sm font-medium text-text-primary">
+                  Active (visible on storefront)
+                </span>
+              </label>
+
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  {...register("isFeatured")}
+                  className="w-4 h-4 rounded border-border text-primary focus:ring-2 focus:ring-primary/30"
+                />
+                <span className="text-sm font-medium text-text-primary">
+                  Featured category
+                </span>
+              </label>
+            </div>
+          </Card>
         </div>
-      </Form>
-    </Formik>
+      </div>
+    </Form>
   );
 };
 

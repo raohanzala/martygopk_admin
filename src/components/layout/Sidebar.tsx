@@ -47,46 +47,46 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       icon: <IoFolderOutline className="w-5 h-5" />,
       path: '/categories',
     },
-    {
-      label: 'Brands',
-      icon: <IoPricetagOutline className="w-5 h-5" />,
-      path: '/brands',
-    },
+    // {
+    //   label: 'Brands',
+    //   icon: <IoPricetagOutline className="w-5 h-5" />,
+    //   path: '/brands',
+    // },
     {
       label: 'Orders',
       icon: <IoReceiptOutline className="w-5 h-5" />,
       path: '/orders',
     },
-    {
-      label: 'Promo codes',
-      icon: <IoGiftOutline className="w-5 h-5" />,
-      path: '/promos',
-    },
-    {
-      label: 'Blog',
-      icon: <IoNewspaperOutline className="w-5 h-5" />,
-      path: '/blogs',
-    },
-    {
-      label: 'Reviews',
-      icon: <IoStarOutline className="w-5 h-5" />,
-      path: '/reviews',
-    },
-    {
-      label: 'Newsletter',
-      icon: <IoMailOutline className="w-5 h-5" />,
-      path: '/newsletter',
-    },
+    // {
+    //   label: 'Promo codes',
+    //   icon: <IoGiftOutline className="w-5 h-5" />,
+    //   path: '/promos',
+    // },
+    // {
+    //   label: 'Blog',
+    //   icon: <IoNewspaperOutline className="w-5 h-5" />,
+    //   path: '/blogs',
+    // },
+    // {
+    //   label: 'Reviews',
+    //   icon: <IoStarOutline className="w-5 h-5" />,
+    //   path: '/reviews',
+    // },
+    // {
+    //   label: 'Newsletter',
+    //   icon: <IoMailOutline className="w-5 h-5" />,
+    //   path: '/newsletter',
+    // },
     {
       label: 'Notifications',
       icon: <IoNotificationsOutline className="w-5 h-5" />,
       path: '/notifications',
     },
-    {
-      label: 'Users',
-      icon: <IoPeopleOutline className="w-5 h-5" />,
-      path: '/users',
-    },
+    // {
+    //   label: 'Users',
+    //   icon: <IoPeopleOutline className="w-5 h-5" />,
+    //   path: '/users',
+    // },
     {
       label: 'Settings',
       icon: <IoSettingsOutline className="w-5 h-5" />,
@@ -114,7 +114,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed lg:static inset-y-0 left-0 z-50 w-64 bg-secondary border-r border-border/20 transform transition-transform duration-300 ease-in-out lg:translate-x-0',
+          'fixed lg:static inset-y-0 left-0 z-50 w-64 bg-[#001846] border-r border-border/20 transform transition-transform duration-300 ease-in-out lg:translate-x-0',
           isOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
@@ -122,7 +122,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           {/* Logo */}
           <div className="flex items-center justify-center px-6 py-5 border-b border-white/10">
 
-            <img src="/src/assets/logo-dark.png" alt="Realtime Wrist Logo" width={100} height={32} className="w-36 h-auto" />
+            <img src="/src/assets/logo.png" alt="Realtime Wrist Logo" width={100} height={32} className="w-48 h-auto" />
             {/* <button
               onClick={onClose}
               className="lg:hidden p-1  rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-colors"
@@ -143,16 +143,16 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                       to={item.path}
                       onClick={onClose}
                       className={cn(
-                        'flex items-center gap-3 px-4 py-3 rounded transition-all duration-200 group',
+                        'flex items-center gap-3 px-4 py-3 rounded-md transition-all duration-200 group',
                         active
-                          ? 'bg-primary/20 text-primary font-medium border-l-4 border-primary'
+                          ? 'bg-primary text-white font-medium'
                           : 'text-white/70 hover:bg-white/10 hover:text-white'
                       )}
                     >
                       <span
                         className={cn(
                           'transition-colors',
-                          active ? 'text-primary' : 'text-white/70 group-hover:text-white'
+                          active ? 'text-white' : 'text-white/70 group-hover:text-white'
                         )}
                       >
                         {item.icon}

@@ -5,13 +5,12 @@ export function useCategory(id: string | undefined) {
   const {
     isPending: isCategoryLoading,
     error: categoryError,
-    data,
+    data: category,
   } = useQuery({
     queryKey: ['categories', id],
     queryFn: () => getCategoryByIdApi(id!),
     enabled: !!id,
   });
 
-  const category = data?.category;
   return { category, isCategoryLoading, categoryError };
 }

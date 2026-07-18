@@ -26,28 +26,30 @@ function Table<T extends Record<string, any>>({
 }: TableProps<T>) {
   if (data.length === 0) {
     return (
-      <div className="bg-surface border border-border rounded">
-        <div className="p-8 text-center">
-          <p className="text-sm text-text-muted">{emptyMessage}</p>
+      <div className={cn('bg-surface', className)}>
+        <div className="px-6 py-16 text-center">
+          <p className="text-sm font-medium text-text-secondary">{emptyMessage}</p>
+          <p className="mt-1 text-xs text-text-muted">
+            Try adjusting your search or add a new item.
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={cn('bg-surface border border-border rounded overflow-hidden', className)}>
+    <div className={cn('bg-surface overflow-hidden', className)}>
       <div className="overflow-x-auto scrollbar-hide">
-        <table className="w-full">
+        <table className="w-full border-collapse">
           <thead>
-            <tr className="border-b border-border bg-background">
+            <tr className="border-b border-border">
               {columns.map((column) => (
                 <th
                   key={column.key}
                   className={cn(
-                    'px-4 py-3 text-left text-nowrap text-xs font-semibold text-text-secondary uppercase tracking-wider',
+                    'px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-[0.06em] text-text-muted bg-background/80',
                     column.align === 'center' && 'text-center',
-                    column.align === 'right' && 'text-right',
-                    column.width && `w-[${column.width}]`
+                    column.align === 'right' && 'text-right'
                   )}
                   style={column.width ? { width: column.width } : undefined}
                 >
@@ -56,21 +58,21 @@ function Table<T extends Record<string, any>>({
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
+          <tbody>
             {data.map((item, rowIndex) => (
               <tr
-                key={rowIndex}
+                key={item._id ?? item.id ?? rowIndex}
                 onClick={() => onRowClick?.(item, rowIndex)}
                 className={cn(
-                  'transition-colors text-nowrap whitespace-nowrap',
-                  onRowClick && 'cursor-pointer hover:bg-background'
+                  'border-b border-border/70 last:border-b-0 transition-colors',
+                  onRowClick && 'cursor-pointer hover:bg-background/70'
                 )}
               >
                 {columns.map((column) => (
                   <td
                     key={column.key}
                     className={cn(
-                      'px-4 py-3 text-sm text-text-primary',
+                      'px-5 py-4 text-sm text-text-primary text-nowrap align-middle',
                       column.align === 'center' && 'text-center',
                       column.align === 'right' && 'text-right'
                     )}

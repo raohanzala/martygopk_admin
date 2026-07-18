@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { getProductsApi } from '@/api/products';
 
-export function useProducts(searchInput?: string, page = 1, limit = 10) {
+export function useProducts(searchInput?: string, page = 1, pageSize = 10) {
   const search = searchInput || '';
 
   const {
@@ -9,10 +9,25 @@ export function useProducts(searchInput?: string, page = 1, limit = 10) {
     error: productsError,
     data,
   } = useQuery({
-    queryKey: ['products', page, limit, search],
-    queryFn: () => getProductsApi({ page, limit, search }),
+    queryKey: ['products', page, pageSize, search],
+    queryFn: () =>
+      getProductsApi({
+        page,
+        pageSize,
+        search,
+        isAdmin: true,
+      }),
   });
 
-  const { products, pagination } = data || {};
+  const products = data?.products ?? [];
+  const pagination = data
+    ? {
+        page: data.currentPage,
+        pages: data.totalPages,
+        total: data.totalProducts,
+        limit: data.pageSize,
+      }
+    : undefined;
+
   return { products, pagination, isProductsLoading, productsError };
 }

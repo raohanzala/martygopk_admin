@@ -1,69 +1,33 @@
-import { Formik, Form } from 'formik';
-import * as Yup from 'yup';
-import { Input, Textarea, Select, Checkbox, Button, Card } from '@/components';
+import { useEffect } from 'react';
+import { useForm, useFormContext, type Path, type Resolver } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Button, Card, Spinner } from '@/components';
+import Form from '@/components/form/Form';
+import FormRowVertical from '@/components/form/FormRowVertical';
+import Input from '@/components/form/Input';
+import Textarea from '@/components/form/Textarea';
+import Select from '@/components/form/Select';
 import { useSettings } from '../hooks/useSettings';
 import { useUpdateSettings } from '../hooks/useUpdateSettings';
 import { useResetSettings } from '../hooks/useResetSettings';
-import { Spinner } from '@/components';
 import type { SettingsFormValues } from '../types/settings.types';
+import {
+  SETTINGS_FORM_DEFAULTS,
+  settingsFormSchema,
+} from '../validation/settings.validation';
+import { cn } from '@/utils/cn';
 
-const settingsSchema = Yup.object({
-  siteName: Yup.string().required('Site name is required'),
-  currency: Yup.string().required('Currency is required'),
-});
+const CURRENCY_OPTIONS = [
+  { value: 'PKR', label: 'PKR' },
+  { value: 'USD', label: 'USD' },
+  { value: 'EUR', label: 'EUR' },
+  { value: 'GBP', label: 'GBP' },
+];
 
-const defaultSocial = {
-  facebook: '',
-  instagram: '',
-  twitter: '',
-  youtube: '',
-  tiktok: '',
-  whatsapp: '',
-  linkedin: '',
-};
-
-const defaultAnnouncement = {
-  isActive: false,
-  title: '',
-  description: '',
-  endDate: '',
-  backgroundColor: '#D4AF37',
-  textColor: '#000000',
-  discountPercentage: 0,
-};
-
-function settingsToFormValues(settings: Record<string, unknown> | null): SettingsFormValues {
-  if (!settings) {
-    return {
-      siteName: '',
-      currency: 'PKR',
-      seo: {
-        metaTitle: '',
-        metaDescription: '',
-        metaKeywords: '',
-      },
-      announcement: { ...defaultAnnouncement },
-      contact: {
-        supportEmail: '',
-        supportPhone: '',
-        whatsappNumber: '',
-        whatsappChannel: '',
-      },
-      social: { ...defaultSocial },
-      shipping: {
-        flatFee: 300,
-        freeShippingAbove: 5000,
-      },
-      payment: {
-        codEnabled: true,
-        cardEnabled: false,
-      },
-      order: {
-        autoConfirm: false,
-        allowCancel: true,
-      },
-    };
-  }
+function settingsToFormValues(
+  settings: Record<string, unknown> | null
+): SettingsFormValues {
+  if (!settings) return structuredClone(SETTINGS_FORM_DEFAULTS);
 
   const seo = settings.seo as Record<string, unknown> | undefined;
   const announcement = settings.announcement as Record<string, unknown> | undefined;
@@ -132,7 +96,10 @@ function settingsToFormValues(settings: Record<string, unknown> | null): Setting
 
 function formValuesToApi(values: SettingsFormValues) {
   const keywords = values.seo.metaKeywords
-    ? values.seo.metaKeywords.split(',').map((k) => k.trim()).filter(Boolean)
+    ? values.seo.metaKeywords
+        .split(',')
+        .map((k) => k.trim())
+        .filter(Boolean)
     : [];
 
   return {
@@ -147,7 +114,9 @@ function formValuesToApi(values: SettingsFormValues) {
       isActive: values.announcement.isActive,
       title: values.announcement.title || undefined,
       description: values.announcement.description || undefined,
-      endDate: values.announcement.endDate ? `${values.announcement.endDate}T23:59:59.000Z` : undefined,
+      endDate: values.announcement.endDate
+        ? `${values.announcement.endDate}T23:59:59.000Z`
+        : undefined,
       backgroundColor: values.announcement.backgroundColor,
       textColor: values.announcement.textColor,
       discountPercentage: values.announcement.discountPercentage ?? 0,
@@ -182,6 +151,301 @@ function formValuesToApi(values: SettingsFormValues) {
   };
 }
 
+function CheckboxField({
+  name,
+  label,
+  helperText,
+}: {
+  name: Path<SettingsFormValues>;
+  label: string;
+  helperText?: string;
+}) {
+  const { register } = useFormContext<SettingsFormValues>();
+
+  return (
+    <div className="w-full">
+      <label className="flex cursor-pointer items-center gap-3">
+        <input
+          type="checkbox"
+          {...register(name)}
+          className="h-4 w-4 rounded border-border text-primary focus:ring-2 focus:ring-primary/30"
+        />
+        <span className="text-sm font-medium text-text-primary">{label}</span>
+      </label>
+      {helperText && (
+        <p className={cn('mt-1 text-xs text-text-muted')}>{helperText}</p>
+      )}
+    </div>
+  );
+}
+
+function SettingsForm({
+  initialValues,
+  isUpdating,
+  onSubmit,
+}: {
+  initialValues: SettingsFormValues;
+  isUpdating: boolean;
+  onSubmit: (values: SettingsFormValues) => void;
+}) {
+  const methods = useForm<SettingsFormValues>({
+    resolver: zodResolver(settingsFormSchema) as Resolver<SettingsFormValues>,
+    defaultValues: SETTINGS_FORM_DEFAULTS,
+  });
+
+  const { reset } = methods;
+
+  useEffect(() => {
+    reset(initialValues);
+  }, [initialValues, reset]);
+
+  return (
+    <Form
+      methods={methods}
+      onSubmit={onSubmit}
+      disabled={isUpdating}
+      className="space-y-6"
+    >
+      <Card title="General" description="Site identity and currency">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <FormRowVertical label="Site Name" name="siteName" required>
+            <Input name="siteName" placeholder="Luxury Watches" />
+          </FormRowVertical>
+          <FormRowVertical label="Currency" name="currency" required>
+            <Select name="currency" options={CURRENCY_OPTIONS} />
+          </FormRowVertical>
+        </div>
+      </Card>
+
+      <Card
+        title="Announcement bar"
+        description="Top banner message and styling"
+      >
+        <div className="space-y-4">
+          <CheckboxField
+            name="announcement.isActive"
+            label="Show announcement bar"
+          />
+          <FormRowVertical label="Title" name="announcement.title">
+            <Input
+              name="announcement.title"
+              placeholder="e.g. Limited time offer"
+            />
+          </FormRowVertical>
+          <FormRowVertical label="Description" name="announcement.description">
+            <Input
+              name="announcement.description"
+              placeholder="e.g. 50% OFF on All Watches!"
+            />
+          </FormRowVertical>
+          <FormRowVertical
+            label="Discount % (optional)"
+            name="announcement.discountPercentage"
+          >
+            <Input
+              name="announcement.discountPercentage"
+              type="number"
+              min={0}
+              max={100}
+              step={1}
+              placeholder="50"
+            />
+          </FormRowVertical>
+          <FormRowVertical
+            label="End date (optional)"
+            name="announcement.endDate"
+          >
+            <Input name="announcement.endDate" type="date" />
+          </FormRowVertical>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <FormRowVertical
+              label="Background color"
+              name="announcement.backgroundColor"
+            >
+              <Input
+                name="announcement.backgroundColor"
+                type="text"
+                placeholder="#D4AF37"
+              />
+            </FormRowVertical>
+            <FormRowVertical label="Text color" name="announcement.textColor">
+              <Input
+                name="announcement.textColor"
+                type="text"
+                placeholder="#000000"
+              />
+            </FormRowVertical>
+          </div>
+        </div>
+      </Card>
+
+      <Card title="SEO" description="Meta tags for search engines">
+        <div className="space-y-4">
+          <FormRowVertical label="Meta Title" name="seo.metaTitle">
+            <Input
+              name="seo.metaTitle"
+              placeholder="Luxury Watches - Premium Timepieces"
+            />
+          </FormRowVertical>
+          <FormRowVertical label="Meta Description" name="seo.metaDescription">
+            <Textarea
+              name="seo.metaDescription"
+              rows={3}
+              placeholder="Discover our collection of luxury watches"
+            />
+          </FormRowVertical>
+          <FormRowVertical label="Meta Keywords" name="seo.metaKeywords">
+            <Input
+              name="seo.metaKeywords"
+              placeholder="watches, luxury, timepieces (comma-separated)"
+            />
+          </FormRowVertical>
+        </div>
+      </Card>
+
+      <Card
+        title="Social links"
+        description="URLs for social media (shown in footer etc.)"
+      >
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <FormRowVertical label="Facebook URL" name="social.facebook">
+            <Input name="social.facebook" placeholder="https://facebook.com/..." />
+          </FormRowVertical>
+          <FormRowVertical label="Instagram URL" name="social.instagram">
+            <Input
+              name="social.instagram"
+              placeholder="https://instagram.com/..."
+            />
+          </FormRowVertical>
+          <FormRowVertical label="Twitter / X URL" name="social.twitter">
+            <Input name="social.twitter" placeholder="https://twitter.com/..." />
+          </FormRowVertical>
+          <FormRowVertical label="YouTube URL" name="social.youtube">
+            <Input name="social.youtube" placeholder="https://youtube.com/..." />
+          </FormRowVertical>
+          <FormRowVertical label="TikTok URL" name="social.tiktok">
+            <Input name="social.tiktok" placeholder="https://tiktok.com/..." />
+          </FormRowVertical>
+          <FormRowVertical
+            label="WhatsApp (optional profile / link)"
+            name="social.whatsapp"
+          >
+            <Input
+              name="social.whatsapp"
+              placeholder="https://wa.me/... (footer & social)"
+            />
+          </FormRowVertical>
+          <FormRowVertical label="LinkedIn URL" name="social.linkedin">
+            <Input
+              name="social.linkedin"
+              placeholder="https://linkedin.com/..."
+            />
+          </FormRowVertical>
+        </div>
+      </Card>
+
+      <Card
+        title="Contact"
+        description="Support, WhatsApp chat number, and channel link for updates"
+      >
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <FormRowVertical label="Support Email" name="contact.supportEmail">
+            <Input
+              name="contact.supportEmail"
+              type="email"
+              placeholder="support@example.com"
+            />
+          </FormRowVertical>
+          <FormRowVertical label="Support Phone" name="contact.supportPhone">
+            <Input
+              name="contact.supportPhone"
+              placeholder="+92 300 1234567"
+            />
+          </FormRowVertical>
+          <FormRowVertical
+            label="WhatsApp number (orders & chat)"
+            name="contact.whatsappNumber"
+          >
+            <Input
+              name="contact.whatsappNumber"
+              placeholder="+92 300 1234567 — used for Order through WhatsApp"
+            />
+          </FormRowVertical>
+          <FormRowVertical
+            label="WhatsApp channel URL"
+            name="contact.whatsappChannel"
+          >
+            <Input
+              name="contact.whatsappChannel"
+              placeholder="https://whatsapp.com/channel/... or invite link"
+            />
+          </FormRowVertical>
+        </div>
+      </Card>
+
+      <Card title="Shipping" description="Shipping fees and thresholds">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <FormRowVertical label="Flat Fee" name="shipping.flatFee">
+            <Input
+              name="shipping.flatFee"
+              type="number"
+              min={0}
+              step={1}
+              placeholder="300"
+            />
+          </FormRowVertical>
+          <FormRowVertical
+            label="Free Shipping Above"
+            name="shipping.freeShippingAbove"
+          >
+            <Input
+              name="shipping.freeShippingAbove"
+              type="number"
+              min={0}
+              step={1}
+              placeholder="5000"
+            />
+          </FormRowVertical>
+        </div>
+      </Card>
+
+      <Card title="Payment" description="Payment method options">
+        <div className="space-y-4">
+          <CheckboxField
+            name="payment.codEnabled"
+            label="Enable Cash on Delivery (COD)"
+          />
+          <CheckboxField
+            name="payment.cardEnabled"
+            label="Enable Card Payment"
+          />
+        </div>
+      </Card>
+
+      <Card title="Order" description="Order processing settings">
+        <div className="space-y-4">
+          <CheckboxField
+            name="order.autoConfirm"
+            label="Auto-confirm orders"
+            helperText="Orders will be confirmed automatically"
+          />
+          <CheckboxField
+            name="order.allowCancel"
+            label="Allow order cancellation"
+            helperText="Customers can cancel orders before shipping"
+          />
+        </div>
+      </Card>
+
+      <div className="flex justify-end gap-3 border-t border-border pt-4">
+        <Button type="submit" isLoading={isUpdating}>
+          Save settings
+        </Button>
+      </div>
+    </Form>
+  );
+}
+
 export default function SettingsPage() {
   const { settings, isSettingsLoading } = useSettings();
   const { updateSettingsMutation, isUpdating } = useUpdateSettings();
@@ -189,22 +453,22 @@ export default function SettingsPage() {
 
   if (isSettingsLoading) {
     return (
-      <div className="flex justify-center items-center min-h-[400px]">
+      <div className="flex min-h-[400px] items-center justify-center">
         <Spinner size="lg" />
       </div>
     );
   }
 
-  const initialValues = settingsToFormValues(settings ?? null);
+  const initialValues = settingsToFormValues(
+    (settings as Record<string, unknown> | null) ?? null
+  );
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-text-primary">
-            Settings
-          </h1>
-          <p className="text-sm text-text-muted mt-1">
+          <h1 className="text-2xl font-semibold text-text-primary">Settings</h1>
+          <p className="mt-1 text-sm text-text-muted">
             Manage your store settings
           </p>
         </div>
@@ -217,256 +481,13 @@ export default function SettingsPage() {
         </Button>
       </div>
 
-      <Formik
+      <SettingsForm
         initialValues={initialValues}
-        validationSchema={settingsSchema}
+        isUpdating={isUpdating}
         onSubmit={(values) => {
           updateSettingsMutation(formValuesToApi(values));
         }}
-        enableReinitialize
-      >
-        <Form className="space-y-6">
-          {/* General */}
-          <Card title="General" description="Site identity and currency">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Input
-                name="siteName"
-                label="Site Name"
-                placeholder="Luxury Watches"
-                required
-              />
-              <Select
-                name="currency"
-                label="Currency"
-                options={[
-                  { value: 'PKR', label: 'PKR' },
-                  { value: 'USD', label: 'USD' },
-                  { value: 'EUR', label: 'EUR' },
-                  { value: 'GBP', label: 'GBP' },
-                ]}
-              />
-            </div>
-          </Card>
-
-          {/* Announcement bar */}
-          <Card
-            title="Announcement bar"
-            description="Top banner message and styling"
-          >
-            <div className="space-y-4">
-              <Checkbox
-                name="announcement.isActive"
-                label="Show announcement bar"
-              />
-              <Input
-                name="announcement.title"
-                label="Title"
-                placeholder="e.g. Limited time offer"
-              />
-              <Input
-                name="announcement.description"
-                label="Description"
-                placeholder="e.g. 50% OFF on All Watches!"
-              />
-              <Input
-                name="announcement.discountPercentage"
-                label="Discount % (optional)"
-                type="number"
-                min={0}
-                max={100}
-                step={1}
-                placeholder="50"
-              />
-              <Input
-                name="announcement.endDate"
-                label="End date (optional)"
-                type="date"
-              />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Input
-                  name="announcement.backgroundColor"
-                  label="Background color"
-                  type="text"
-                  placeholder="#D4AF37"
-                />
-                <Input
-                  name="announcement.textColor"
-                  label="Text color"
-                  type="text"
-                  placeholder="#000000"
-                />
-              </div>
-            </div>
-          </Card>
-
-          {/* SEO */}
-          <Card
-            title="SEO"
-            description="Meta tags for search engines"
-          >
-            <div className="space-y-4">
-              <Input
-                name="seo.metaTitle"
-                label="Meta Title"
-                placeholder="Luxury Watches - Premium Timepieces"
-              />
-              <Textarea
-                name="seo.metaDescription"
-                label="Meta Description"
-                rows={3}
-                placeholder="Discover our collection of luxury watches"
-              />
-              <Input
-                name="seo.metaKeywords"
-                label="Meta Keywords"
-                placeholder="watches, luxury, timepieces (comma-separated)"
-              />
-            </div>
-          </Card>
-
-          {/* Social links */}
-          <Card
-            title="Social links"
-            description="URLs for social media (shown in footer etc.)"
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Input
-                name="social.facebook"
-                label="Facebook URL"
-                placeholder="https://facebook.com/..."
-              />
-              <Input
-                name="social.instagram"
-                label="Instagram URL"
-                placeholder="https://instagram.com/..."
-              />
-              <Input
-                name="social.twitter"
-                label="Twitter / X URL"
-                placeholder="https://twitter.com/..."
-              />
-              <Input
-                name="social.youtube"
-                label="YouTube URL"
-                placeholder="https://youtube.com/..."
-              />
-              <Input
-                name="social.tiktok"
-                label="TikTok URL"
-                placeholder="https://tiktok.com/..."
-              />
-              <Input
-                name="social.whatsapp"
-                label="WhatsApp (optional profile / link)"
-                placeholder="https://wa.me/... (footer & social)"
-              />
-              <Input
-                name="social.linkedin"
-                label="LinkedIn URL"
-                placeholder="https://linkedin.com/..."
-              />
-            </div>
-          </Card>
-
-          {/* Contact */}
-          <Card
-            title="Contact"
-            description="Support, WhatsApp chat number, and channel link for updates"
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Input
-                name="contact.supportEmail"
-                label="Support Email"
-                type="email"
-                placeholder="support@example.com"
-              />
-              <Input
-                name="contact.supportPhone"
-                label="Support Phone"
-                placeholder="+92 300 1234567"
-              />
-              <Input
-                name="contact.whatsappNumber"
-                label="WhatsApp number (orders & chat)"
-                placeholder="+92 300 1234567 — used for Order through WhatsApp"
-              />
-              <Input
-                name="contact.whatsappChannel"
-                label="WhatsApp channel URL"
-                placeholder="https://whatsapp.com/channel/... or invite link"
-              />
-            </div>
-          </Card>
-
-          {/* Shipping */}
-          <Card
-            title="Shipping"
-            description="Shipping fees and thresholds"
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Input
-                name="shipping.flatFee"
-                label="Flat Fee"
-                type="number"
-                min={0}
-                step={1}
-                placeholder="300"
-              />
-              <Input
-                name="shipping.freeShippingAbove"
-                label="Free Shipping Above"
-                type="number"
-                min={0}
-                step={1}
-                placeholder="5000"
-              />
-            </div>
-          </Card>
-
-          {/* Payment */}
-          <Card
-            title="Payment"
-            description="Payment method options"
-          >
-            <div className="space-y-4">
-              <Checkbox
-                name="payment.codEnabled"
-                label="Enable Cash on Delivery (COD)"
-              />
-              <Checkbox
-                name="payment.cardEnabled"
-                label="Enable Card Payment"
-              />
-            </div>
-          </Card>
-
-          {/* Order */}
-          <Card
-            title="Order"
-            description="Order processing settings"
-          >
-            <div className="space-y-4">
-              <Checkbox
-                name="order.autoConfirm"
-                label="Auto-confirm orders"
-                helperText="Orders will be confirmed automatically"
-              />
-              <Checkbox
-                name="order.allowCancel"
-                label="Allow order cancellation"
-                helperText="Customers can cancel orders before shipping"
-              />
-            </div>
-          </Card>
-
-          {/* Submit */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-border">
-            <Button type="submit" isLoading={isUpdating}>
-              Save settings
-            </Button>
-          </div>
-        </Form>
-      </Formik>
+      />
     </div>
   );
 }

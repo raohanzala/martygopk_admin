@@ -1,21 +1,52 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useCategories } from '../hooks/useCategories';
 import { useDeleteCategory } from '../hooks/useDeleteCategory';
 import { Table, TableSkeleton, Button, Badge, Card, Modal } from '@/components';
 import type { TableColumn } from '@/components/Table';
 import type { Category } from '@/api/categories';
-import { IoAdd, IoPencil, IoTrash } from 'react-icons/io5';
+import {
+  IoAdd,
+  IoPencil,
+  IoTrash,
+  IoSearchOutline,
+  IoImageOutline,
+  IoChevronForward,
+  IoStar,
+  IoStarOutline,
+} from 'react-icons/io5';
+
+function getImageUrl(image: Category['image']): string | null {
+  if (!image) return null;
+  if (typeof image === 'string') {
+    if (!image) return null;
+    if (image.startsWith('http') || image.startsWith('data:')) return image;
+    const base =
+      import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3002';
+    return `${base}${image}`;
+  }
+  if (image.url) {
+    if (image.url.startsWith('http')) return image.url;
+    const base =
+      import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3002';
+    return `${base}${image.url}`;
+  }
+  return null;
+}
 
 const CategoriesList: React.FC = () => {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(
-    null
-  );
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
 
-  const { categories, isCategoriesLoading } = useCategories(search);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const { categories, isCategoriesLoading } = useCategories(debouncedSearch);
   const { deleteCategoryMutation, isDeletingCategory } = useDeleteCategory();
 
   const handleDelete = (category: Category) => {
@@ -24,40 +55,46 @@ const CategoriesList: React.FC = () => {
   };
 
   const confirmDelete = () => {
-    if (selectedCategory) {
-      deleteCategoryMutation(selectedCategory._id);
-      setDeleteModalOpen(false);
-      setSelectedCategory(null);
-    }
-  };
-
-  const getImageUrl = (image: string) => {
-    if (!image) return '/placeholder.png';
-    if (image.startsWith('http')) return image;
-    const base = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
-    return `${base}${image}`;
+    if (!selectedCategory) return;
+    deleteCategoryMutation(selectedCategory._id, {
+      onSuccess: () => {
+        setDeleteModalOpen(false);
+        setSelectedCategory(null);
+      },
+    });
   };
 
   const columns: TableColumn<Category>[] = [
     {
       key: 'image',
       header: 'Image',
-      render: (item) => (
-        <img
-          src={getImageUrl(item.image)}
-          alt={item.name}
-          className="w-12 h-12 object-cover rounded"
-        />
-      ),
       width: '80px',
+      render: (item) => {
+        const url = getImageUrl(item.image);
+        return (
+          <div className="h-12 w-12 overflow-hidden rounded-lg border border-border bg-background">
+            {url ? (
+              <img
+                src={url}
+                alt={typeof item.image === 'object' ? item.image?.alt || item.name : item.name}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-text-muted">
+                <IoImageOutline className="h-5 w-5" />
+              </div>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: 'name',
       header: 'Category',
       render: (item) => (
-        <div>
+        <div className="min-w-0">
           <p className="font-medium text-text-primary">{item.name}</p>
-          <p className="text-xs text-text-muted">{item.slug}</p>
+          <p className="mt-0.5 text-xs text-text-muted">{item.slug}</p>
         </div>
       ),
     },
@@ -65,36 +102,30 @@ const CategoriesList: React.FC = () => {
       key: 'description',
       header: 'Description',
       render: (item) => (
-        <span className="text-sm text-text-secondary line-clamp-2 max-w-xs">
-          {item.description || '-'}
+        <span className="line-clamp-2 max-w-xs text-sm text-text-secondary">
+          {item.description || '—'}
         </span>
       ),
     },
     {
-      key: 'order',
-      header: 'Order',
-      render: (item) => (
-        <span className="text-sm text-text-secondary tabular-nums">
-          {item.order ?? 0}
-        </span>
-      ),
-      width: '80px',
-    },
-    {
-      key: 'showOnHomePage',
-      header: 'Home page',
-      render: (item) => (
-        <Badge variant={item.showOnHomePage ? 'success' : 'default'}>
-          {item.showOnHomePage ? 'Yes' : 'No'}
-        </Badge>
-      ),
-      width: '100px',
+      key: 'isFeatured',
+      header: 'Featured',
+      align: 'center',
+      render: (item) =>
+        item.isFeatured ? (
+          <IoStar className="mx-auto h-5 w-5 text-amber-400" aria-label="Featured" />
+        ) : (
+          <IoStarOutline
+            className="mx-auto h-5 w-5 text-text-muted/50"
+            aria-label="Not featured"
+          />
+        ),
     },
     {
       key: 'isActive',
       header: 'Status',
       render: (item) => (
-        <Badge variant={item.isActive ? 'success' : 'default'}>
+        <Badge variant={item.isActive ? 'success' : 'default'} size="sm" className="rounded-full">
           {item.isActive ? 'Active' : 'Inactive'}
         </Badge>
       ),
@@ -104,26 +135,28 @@ const CategoriesList: React.FC = () => {
       header: 'Actions',
       align: 'right',
       render: (item) => (
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center justify-end gap-1">
           <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
               navigate(`/categories/${item._id}/edit`);
             }}
-            className="p-1.5 rounded text-text-secondary hover:bg-background hover:text-primary transition-colors"
+            className="rounded-lg p-2 text-text-muted transition-colors hover:bg-background hover:text-primary"
             aria-label="Edit category"
           >
-            <IoPencil className="w-4 h-4" />
+            <IoPencil className="h-4 w-4" />
           </button>
           <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
               handleDelete(item);
             }}
-            className="p-1.5 rounded text-text-secondary hover:bg-background hover:text-error transition-colors"
+            className="rounded-lg p-2 text-text-muted transition-colors hover:bg-error/10 hover:text-error"
             aria-label="Delete category"
           >
-            <IoTrash className="w-4 h-4" />
+            <IoTrash className="h-4 w-4" />
           </button>
         </div>
       ),
@@ -131,51 +164,46 @@ const CategoriesList: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between items-center">
         <div>
-          <h1 className="text-2xl font-semibold text-text-primary">
+          <h1 className="text-2xl font-semibold tracking-tight text-text-primary">
             Categories
           </h1>
-          <p className="text-sm text-text-muted mt-1">
-            Manage product categories
+          <p className="mt-1 text-sm text-text-muted">
+            Manage product categories for your storefront.
           </p>
         </div>
         <Button
-          leftIcon={<IoAdd className="w-4 h-4" />}
+          leftIcon={<IoAdd className="h-4 w-4" />}
           onClick={() => navigate('/categories/new')}
         >
           Add category
         </Button>
       </div>
 
-      {/* Search */}
-      <Card>
-        <div className="flex items-center gap-4">
-          <div className="flex-1">
-            <input
-              type="text"
-              placeholder="Search categories..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full px-3 py-2 rounded border border-border bg-surface text-text-primary placeholder:text-text-muted text-sm h-9 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all"
-            />
-          </div>
+      <Card className="[&>div:last-child]:p-4">
+        <div className="relative">
+          <IoSearchOutline className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+          <input
+            type="text"
+            placeholder="Search categories..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-10 w-full rounded-lg border border-border bg-white pl-9 pr-3 text-sm text-text-primary placeholder:text-text-muted outline-none transition-all focus:border-primary focus:ring-1 focus:ring-primary"
+          />
         </div>
       </Card>
 
-      {/* Categories Table */}
-      <Card>
+      <Card className="overflow-hidden [&>div:last-child]:p-0">
         {isCategoriesLoading ? (
           <TableSkeleton
-            rowCount={10}
+            rowCount={8}
             columns={[
               { image: true, width: '80px' },
               {},
               {},
-              { width: '80px' },
-              { width: '100px' },
+              {},
               {},
               { alignRight: true },
             ]}
@@ -185,14 +213,19 @@ const CategoriesList: React.FC = () => {
             data={categories}
             columns={columns}
             onRowClick={(item) => navigate(`/categories/${item._id}/edit`)}
+            emptyMessage={
+              debouncedSearch
+                ? `No categories match “${debouncedSearch}”`
+                : 'No categories yet'
+            }
           />
         )}
       </Card>
 
-      {/* Delete Confirmation Modal */}
       <Modal
         isOpen={deleteModalOpen}
         onClose={() => {
+          if (isDeletingCategory) return;
           setDeleteModalOpen(false);
           setSelectedCategory(null);
         }}
@@ -200,8 +233,8 @@ const CategoriesList: React.FC = () => {
       >
         <div className="space-y-4">
           <p className="text-sm text-text-secondary">
-            Are you sure you want to delete &quot;{selectedCategory?.name}&quot;?
-            This action cannot be undone.
+            Are you sure you want to delete &ldquo;{selectedCategory?.name}&rdquo;? This
+            action cannot be undone.
           </p>
           <div className="flex justify-end gap-3">
             <Button
@@ -210,6 +243,7 @@ const CategoriesList: React.FC = () => {
                 setDeleteModalOpen(false);
                 setSelectedCategory(null);
               }}
+              disabled={isDeletingCategory}
             >
               Cancel
             </Button>

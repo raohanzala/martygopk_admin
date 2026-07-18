@@ -17,7 +17,7 @@ const Card: React.FC<CardProps> = ({
   actions,
 }) => {
   return (
-    <div className={cn('bg-surface border border-border rounded shadow', className)}>
+    <div className={cn('rounded-xl border border-slate-200/80 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.06)]', className)}>
       {(title || description || actions) && (
         <div className="px-5 py-4 border-b border-border flex items-start justify-between gap-4">
           <div className="flex-1">

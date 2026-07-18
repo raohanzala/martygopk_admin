@@ -19,6 +19,8 @@ export default function VariantsSection() {
       <DynamicFieldArray
         name="variants"
         defaultItem={DEFAULT_VARIANT}
+        addLabel="Add variant"
+        emptyMessage="No variants yet. Add color, size, price, or stock options."
         renderFields={(index) => (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <FormRowVertical label="Color" name={`variants.${index}.color`}>

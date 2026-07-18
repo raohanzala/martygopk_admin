@@ -1,7 +1,12 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { useField } from 'formik';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  useController,
+  useFormContext,
+  type FieldValues,
+  type RegisterOptions,
+} from 'react-hook-form';
 import { IoChevronDown } from 'react-icons/io5';
-import { cn } from '../utils/cn';
+import { cn } from '@/utils/cn';
 
 export interface SelectOption {
   value: string | number;
@@ -9,59 +14,96 @@ export interface SelectOption {
   disabled?: boolean;
 }
 
-export interface SelectProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {
+export interface SelectProps
+  extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {
   name: string;
+  options: SelectOption[];
+  placeholder?: string;
+  disabled?: boolean;
+  required?: boolean;
   label?: string;
   helperText?: string;
   error?: string;
-  options: SelectOption[];
-  placeholder?: string;
-  required?: boolean;
-  disabled?: boolean;
+  registerOptions?: RegisterOptions<FieldValues, string>;
 }
 
 const Select: React.FC<SelectProps> = ({
   name,
+  options,
+  placeholder = 'Select an option',
+  disabled,
+  required,
   label,
   helperText,
   error: externalError,
-  options,
-  placeholder,
+  registerOptions,
   className,
-  required,
-  disabled,
   ...props
 }) => {
-  const [field, meta, helpers] = useField(name);
+  const { control } = useFormContext();
+  const {
+    field: { value, onChange, onBlur, ref },
+    fieldState: { error: fieldError },
+  } = useController({
+    name,
+    control,
+    rules: registerOptions,
+  });
+
   const [isOpen, setIsOpen] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const hasError = (meta.touched && meta.error) || externalError;
-  const errorMessage = externalError || (meta.touched && meta.error ? meta.error : '');
+  const errorMessage = externalError || fieldError?.message;
+  const hasError = Boolean(errorMessage);
 
-  const selectedOption = options.find((opt) => String(opt.value) === String(field.value));
-  const displayValue = selectedOption ? selectedOption.label : '';
+  const selectedOption = options.find(
+    (opt) => String(opt.value) === String(value ?? '')
+  );
+  const displayValue = selectedOption?.label ?? '';
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-        helpers.setTouched(true);
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
+        if (isOpen) {
+          setIsOpen(false);
+          onBlur();
+        }
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [helpers]);
+  }, [isOpen, onBlur]);
 
   useEffect(() => {
     if (!isOpen) {
       setFocusedIndex(-1);
-    } else {
-      const idx = options.findIndex((opt) => String(opt.value) === String(field.value));
-      setFocusedIndex(idx >= 0 ? idx : 0);
+      return;
     }
-  }, [isOpen, field.value, options]);
+    const idx = options.findIndex(
+      (opt) => String(opt.value) === String(value ?? '')
+    );
+    setFocusedIndex(idx >= 0 ? idx : 0);
+  }, [isOpen, value, options]);
+
+  const close = () => {
+    setIsOpen(false);
+    onBlur();
+  };
+
+  const handleSelect = (option: SelectOption) => {
+    if (option.disabled) return;
+    onChange(option.value);
+    close();
+  };
+
+  const handleClear = () => {
+    onChange('');
+    close();
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (disabled) return;
@@ -70,16 +112,19 @@ const Select: React.FC<SelectProps> = ({
       case 'Enter':
       case ' ':
         e.preventDefault();
-        if (isOpen && focusedIndex >= 0 && options[focusedIndex] && !options[focusedIndex].disabled) {
-          helpers.setValue(options[focusedIndex].value);
-          helpers.setTouched(true);
-          setIsOpen(false);
+        if (
+          isOpen &&
+          focusedIndex >= 0 &&
+          options[focusedIndex] &&
+          !options[focusedIndex].disabled
+        ) {
+          handleSelect(options[focusedIndex]);
         } else {
-          setIsOpen(!isOpen);
+          setIsOpen((open) => !open);
         }
         break;
       case 'Escape':
-        setIsOpen(false);
+        close();
         break;
       case 'ArrowDown':
         e.preventDefault();
@@ -103,57 +148,68 @@ const Select: React.FC<SelectProps> = ({
           }
         }
         break;
+      case 'Tab':
+        if (isOpen) close();
+        break;
       default:
         break;
     }
   };
 
-  const handleSelect = (option: SelectOption) => {
-    if (option.disabled) return;
-    helpers.setValue(option.value);
-    helpers.setTouched(true);
-    setIsOpen(false);
-  };
-
-  const isDisabled = disabled ?? props['aria-disabled'];
-
   return (
-    <div ref={containerRef} className={cn('w-full relative', className)} {...props}>
+    <div
+      ref={(node) => {
+        containerRef.current = node;
+        if (typeof ref === 'function') ref(node);
+        else if (ref) {
+          (ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
+        }
+      }}
+      className={cn('relative w-full', className)}
+      {...props}
+    >
       {label && (
         <label
           htmlFor={name}
-          className="block text-sm font-medium text-text-primary mb-1"
+          className="mb-1 block text-sm font-medium text-text-secondary"
         >
           {label}
-          {required && <span className="text-error ml-0.5">*</span>}
+          {required && <span className="ml-0.5 text-error">*</span>}
         </label>
       )}
 
       <div
+        id={name}
         role="combobox"
         aria-expanded={isOpen}
         aria-haspopup="listbox"
         aria-controls={`${name}-listbox`}
-        aria-disabled={isDisabled}
-        tabIndex={isDisabled ? -1 : 0}
+        aria-disabled={disabled}
+        aria-invalid={hasError}
+        tabIndex={disabled ? -1 : 0}
         onKeyDown={handleKeyDown}
-        onClick={() => !isDisabled && setIsOpen(!isOpen)}
+        onClick={() => !disabled && setIsOpen((open) => !open)}
+        onBlur={(e) => {
+          if (!containerRef.current?.contains(e.relatedTarget as Node)) {
+            onBlur();
+          }
+        }}
         className={cn(
-          'w-full px-3 py-2 rounded-md border transition-all duration-150',
-          'bg-surface text-text-primary text-sm h-9',
-          'flex items-center justify-between gap-2 cursor-pointer',
-          'focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-0',
-          'border-border hover:border-primary/50 focus:border-primary',
-          isDisabled && 'opacity-50 cursor-not-allowed bg-background',
-          className
+          'flex h-auto w-full cursor-pointer items-center justify-between gap-2',
+          'rounded-md border border-border bg-bg-main px-4 py-[8px] text-sm text-text-primary',
+          'outline-none transition-all duration-200',
+          'hover:border-primary/40',
+          'focus:border-primary focus:ring-2 focus:ring-primary/25',
+          disabled && 'cursor-not-allowed bg-background opacity-50',
+          hasError && 'border-error focus:border-error focus:ring-error/20'
         )}
       >
-        <span className={cn(!displayValue && 'text-text-muted')}>
+        <span className={cn('truncate', !displayValue && 'text-text-muted')}>
           {displayValue || placeholder}
         </span>
         <IoChevronDown
           className={cn(
-            'w-4 h-4 text-text-muted shrink-0 transition-transform duration-200',
+            'h-4 w-4 shrink-0 text-text-muted transition-transform duration-200',
             isOpen && 'rotate-180'
           )}
         />
@@ -164,43 +220,42 @@ const Select: React.FC<SelectProps> = ({
           id={`${name}-listbox`}
           role="listbox"
           className={cn(
-            'absolute z-50 w-full mt-1 py-1 rounded-md border border-border',
-            'bg-surface shadow-lg max-h-60 overflow-auto',
-            'animate-in fade-in-0 zoom-in-95 duration-150'
+            'absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border border-border',
+            'bg-surface py-1 shadow-lg'
           )}
         >
           {placeholder && !required && (
             <li
               role="option"
-              aria-selected={!field.value}
+              aria-selected={!value}
               className={cn(
-                'px-3 py-2 text-sm cursor-pointer transition-colors',
-                !field.value ? 'text-primary bg-primary/5 font-medium' : 'text-text-muted hover:bg-background',
+                'cursor-pointer px-3 py-2 text-sm transition-colors',
+                !value
+                  ? 'bg-primary/5 font-medium text-primary'
+                  : 'text-text-muted hover:bg-background',
                 focusedIndex === -1 && 'bg-primary/5'
               )}
-              onClick={() => {
-                helpers.setValue('');
-                helpers.setTouched(true);
-                setIsOpen(false);
-              }}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={handleClear}
             >
               {placeholder}
             </li>
           )}
           {options.map((option, index) => (
             <li
-              key={option.value}
+              key={String(option.value)}
               role="option"
-              aria-selected={String(option.value) === String(field.value)}
+              aria-selected={String(option.value) === String(value ?? '')}
               aria-disabled={option.disabled}
               className={cn(
-                'px-3 py-2 text-sm cursor-pointer transition-colors',
-                String(option.value) === String(field.value)
-                  ? 'text-primary bg-primary/10 font-medium'
+                'cursor-pointer px-3 py-2 text-sm transition-colors',
+                String(option.value) === String(value ?? '')
+                  ? 'bg-primary/10 font-medium text-primary'
                   : 'text-text-primary hover:bg-background',
-                option.disabled && 'opacity-50 cursor-not-allowed',
+                option.disabled && 'cursor-not-allowed opacity-50',
                 focusedIndex === index && 'bg-background'
               )}
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() => handleSelect(option)}
             >
               {option.label}
@@ -215,11 +270,11 @@ const Select: React.FC<SelectProps> = ({
             'mt-1 text-xs',
             hasError ? 'text-error' : 'text-text-muted'
           )}
+          role={hasError ? 'alert' : undefined}
         >
           {errorMessage || helperText}
         </p>
       )}
-
     </div>
   );
 };

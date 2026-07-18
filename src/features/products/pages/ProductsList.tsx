@@ -1,53 +1,50 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProducts } from '../hooks/useProducts';
 import { useDeleteProduct } from '../hooks/useDeleteProduct';
-import { Table, TableSkeleton, Button, Badge, Card, Pagination } from '@/components';
+import { Table, TableSkeleton, Button, Badge, Card, Pagination, Modal } from '@/components';
 import type { TableColumn } from '@/components/Table';
-import { IoAdd, IoPencil, IoTrash, IoCopyOutline } from 'react-icons/io5';
-import { Modal } from '@/components';
+import type { Product } from '@/api/products';
+import { IoAdd, IoPencil, IoTrash, IoCopyOutline, IoSearchOutline, IoImageOutline } from 'react-icons/io5';
 
-interface ProductVariant {
-  _id: string;
-  price: number;
-  finalPrice?: number;
-  discountPercentage?: number;
-  isDefault?: boolean;
+function getDiscountedPrice(price: number, discount = 0) {
+  if (!discount || discount <= 0) return price;
+  return Math.round(price - (price * discount) / 100);
 }
 
-interface Product {
-  _id: string;
-  name: string;
-  slug: string;
-  status: string;
-  categories?: { name: string; _id?: string }[];
-  brandId?: {
-    name: string;
-  };
-  images: {
-    main: string;
-  };
-  variants?: ProductVariant[];
+function getProductImage(item: Product) {
+  const url = item.images?.[0]?.url;
+  if (!url) return null;
+  if (url.startsWith('http')) return url;
+  const base = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3002';
+  return `${base}${url}`;
 }
 
-function getProductDisplayPrice(item: Product): { final: number; original?: number; hasDiscount: boolean } {
-  const vars = item.variants || [];
-  const defaultV = vars.find((v) => v.isDefault) || vars[0];
-  if (!defaultV) return { final: 0, hasDiscount: false };
-  const final = defaultV.finalPrice ?? defaultV.price ?? 0;
-  const original = defaultV.price;
-  const hasDiscount = (defaultV.discountPercentage ?? 0) > 0;
-  return { final, original: hasDiscount ? original : undefined, hasDiscount };
+function availabilityVariant(availability: string): 'success' | 'error' | 'warning' | 'default' {
+  const value = availability?.toLowerCase() || '';
+  if (value.includes('out')) return 'error';
+  if (value.includes('stock') || value.includes('available')) return 'success';
+  if (value.includes('pre') || value.includes('limited')) return 'warning';
+  return 'default';
 }
 
 const ProductsList: React.FC = () => {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  
-  const { products, pagination, isProductsLoading } = useProducts(search, page);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search.trim());
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const { products, pagination, isProductsLoading } = useProducts(debouncedSearch, page);
   const { deleteProductMutation, isDeletingProduct } = useDeleteProduct();
 
   const handleDelete = (product: Product) => {
@@ -56,133 +53,144 @@ const ProductsList: React.FC = () => {
   };
 
   const confirmDelete = () => {
-    if (selectedProduct) {
-      deleteProductMutation(selectedProduct._id, {
-        onSuccess: () => {
-          setDeleteModalOpen(false);
-          setSelectedProduct(null);
-        },
-        onError: (error) => {
-          console.error(error);
-        },
-      });
-      // setDeleteModalOpen(false);
-      setSelectedProduct(null);
-    }
+    if (!selectedProduct) return;
+    deleteProductMutation(selectedProduct._id, {
+      onSuccess: () => {
+        setDeleteModalOpen(false);
+        setSelectedProduct(null);
+      },
+    });
   };
 
   const columns: TableColumn<Product>[] = [
     {
       key: 'image',
-      header: 'Image',
-      render: (item) => (
-        <img
-          src={item.images?.main || '/placeholder.png'}
-          alt={item.name}
-          className="w-12 h-12 object-cover rounded"
-        />
-      ),
-      width: '80px',
-    },
-    {
-      key: 'name',
       header: 'Product',
-      render: (item) => (
-        <div>
-          <p className="font-medium text-text-primary">{item.name}</p>
-          <p className="text-xs text-text-muted">{item.slug}</p>
-        </div>
-      ),
+      width: '320px',
+      render: (item) => {
+        const imageUrl = getProductImage(item);
+        return (
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-border bg-background">
+              {imageUrl ? (
+                <img
+                  src={imageUrl}
+                  alt={item.images?.[0]?.alt || item.title}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-text-muted">
+                  <IoImageOutline className="h-5 w-5" />
+                </div>
+              )}
+            </div>
+            <div className="min-w-0">
+              <p className="truncate font-medium text-text-primary">{item.title}</p>
+              <p className="mt-0.5 truncate text-xs text-text-muted">{item.slug}</p>
+            </div>
+          </div>
+        );
+      },
     },
     {
-      key: 'categories',
+      key: 'category',
       header: 'Category',
-      render: (item) => (
-        <span className="text-sm text-text-secondary">
-          {item.categories?.length
-            ? item.categories.map((c) => c.name).join(', ')
-            : '-'}
-        </span>
-      ),
-    },
-    {
-      key: 'brandId',
-      header: 'Brand',
-      render: (item) => (
-        <span className="text-sm text-text-secondary">
-          {item.brandId?.name || '-'}
-        </span>
-      ),
+      render: (item) =>
+        item.category?.name ? (
+          <span className="inline-flex max-w-[180px] truncate rounded-md border border-border bg-background px-2.5 py-1 text-xs font-medium text-text-secondary">
+            {item.category.name}
+          </span>
+        ) : (
+          <span className="text-sm text-text-muted">—</span>
+        ),
     },
     {
       key: 'price',
       header: 'Price',
       align: 'right',
       render: (item) => {
-        const { final, original, hasDiscount } = getProductDisplayPrice(item);
+        const final = getDiscountedPrice(item.price, item.discount);
+        const hasDiscount = (item.discount ?? 0) > 0;
         return (
           <div className="text-right">
-            <p className="font-medium text-text-primary">
+            <p className="font-semibold tabular-nums text-text-primary">
               PKR {final.toLocaleString()}
             </p>
-            {hasDiscount && original != null && (
-              <p className="text-xs text-text-muted line-through">
-                PKR {original.toLocaleString()}
-              </p>
+            {hasDiscount && (
+              <div className="mt-0.5 flex items-center justify-end gap-1.5">
+                <span className="text-xs tabular-nums text-text-muted line-through">
+                  PKR {Number(item.price).toLocaleString()}
+                </span>
+                <span className="rounded bg-error/10 px-1.5 py-0.5 text-[10px] font-semibold text-error">
+                  -{item.discount}%
+                </span>
+              </div>
             )}
           </div>
         );
       },
     },
     {
-      key: 'status',
-      header: 'Status',
-      render: (item) => {
-        const statusConfig = {
-          active: { label: 'Active', variant: 'success' as const },
-          draft: { label: 'Draft', variant: 'default' as const },
-          out_of_stock: { label: 'Out of Stock', variant: 'error' as const },
-        };
-        const config = statusConfig[item.status as keyof typeof statusConfig] || statusConfig.draft;
-        return <Badge variant={config.variant}>{config.label}</Badge>;
-      },
+      key: 'variants',
+      header: 'Variants',
+      align: 'center',
+      render: (item) => (
+        <span className="tabular-nums text-sm text-text-secondary">
+          {item.variants?.length || 0}
+        </span>
+      ),
+    },
+    {
+      key: 'availability',
+      header: 'Availability',
+      render: (item) => (
+        <Badge variant={availabilityVariant(item.availability)} size="sm">
+          {item.availability || 'Unknown'}
+        </Badge>
+      ),
     },
     {
       key: 'actions',
-      header: 'Actions',
+      header: '',
       align: 'right',
+      width: '140px',
       render: (item) => (
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center justify-end gap-1">
           <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
               navigate(`/products/new?duplicate=${item._id}`);
             }}
-            className="p-1.5 rounded text-text-secondary hover:bg-background hover:text-primary transition-colors"
+            className="rounded-lg p-2 text-text-muted transition-colors hover:bg-background hover:text-primary"
             aria-label="Duplicate product"
-            title="Duplicate product"
+            title="Duplicate"
           >
-            <IoCopyOutline className="w-4 h-4" />
+            <IoCopyOutline className="h-4 w-4" />
           </button>
           <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
               navigate(`/products/${item._id}/edit`);
             }}
-            className="p-1.5 rounded text-text-secondary hover:bg-background hover:text-primary transition-colors"
+            className="rounded-lg p-2 text-text-muted transition-colors hover:bg-background hover:text-primary"
             aria-label="Edit product"
+            title="Edit"
           >
-            <IoPencil className="w-4 h-4" />
+            <IoPencil className="h-4 w-4" />
           </button>
           <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
               handleDelete(item);
             }}
-            className="p-1.5 rounded text-text-secondary hover:bg-background hover:text-error transition-colors"
+            className="rounded-lg p-2 text-text-muted transition-colors hover:bg-error/10 hover:text-error"
             aria-label="Delete product"
+            title="Delete"
           >
-            <IoTrash className="w-4 h-4" />
+            <IoTrash className="h-4 w-4" />
           </button>
         </div>
       ),
@@ -191,61 +199,63 @@ const ProductsList: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-text-primary">Products</h1>
-          <p className="text-sm text-text-muted mt-1">
-            Manage your products and inventory
+          <h1 className="text-2xl font-semibold tracking-tight text-text-primary">Products</h1>
+          <p className="mt-1 text-sm text-text-muted">
+            {pagination?.total != null
+              ? `${pagination.total} product${pagination.total === 1 ? '' : 's'} in your catalog`
+              : 'Manage your products and inventory'}
           </p>
         </div>
-          <Button
-            leftIcon={<IoAdd className="w-4 h-4" />}
-            onClick={() => navigate('/products/new')}
-          >
-            Add product
-          </Button>
+        <Button leftIcon={<IoAdd className="h-4 w-4" />} onClick={() => navigate('/products/new')}>
+          Add product
+        </Button>
       </div>
 
-      {/* Search and Filters */}
-      <Card>
-        <div className="flex items-center gap-4">
-          <div className="flex-1">
-            <input
-              type="text"
-              placeholder="Search products..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full px-3 py-2 rounded border border-border bg-surface text-text-primary placeholder:text-text-muted text-sm h-9 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all"
-            />
-          </div>
+      <Card className="[&>div:last-child]:p-4">
+        <div className="relative">
+          <IoSearchOutline className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+          <input
+            type="text"
+            placeholder="Search by title or description..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-10 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-sm text-text-primary placeholder:text-text-muted transition-all focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+          />
         </div>
       </Card>
 
-      {/* Products Table */}
-      <Card>
+      <Card className="overflow-hidden [&>div:last-child]:p-0">
         {isProductsLoading ? (
           <TableSkeleton
             rowCount={8}
             columns={[
-              { image: true, width: '80px' },
-              {},
-              {},
+              { image: true, width: '320px' },
               {},
               { alignRight: true },
               {},
-              { alignRight: true },
+              {},
+              { alignRight: true, width: '140px' },
             ]}
           />
         ) : (
           <>
             <Table
-              data={products || []}
+              data={products}
               columns={columns}
               onRowClick={(item) => navigate(`/products/${item._id}/edit`)}
+              emptyMessage={
+                debouncedSearch
+                  ? `No products match “${debouncedSearch}”`
+                  : 'No products yet'
+              }
             />
             {pagination && pagination.pages > 1 && (
-              <div className="px-5 py-4 border-t border-border">
+              <div className="flex items-center justify-between gap-4 border-t border-border px-5 py-3.5">
+                <p className="text-xs text-text-muted">
+                  Page {pagination.page} of {pagination.pages}
+                </p>
                 <Pagination
                   currentPage={pagination.page}
                   totalPages={pagination.pages}
@@ -257,10 +267,10 @@ const ProductsList: React.FC = () => {
         )}
       </Card>
 
-      {/* Delete Confirmation Modal */}
       <Modal
         isOpen={deleteModalOpen}
         onClose={() => {
+          if (isDeletingProduct) return;
           setDeleteModalOpen(false);
           setSelectedProduct(null);
         }}
@@ -268,7 +278,8 @@ const ProductsList: React.FC = () => {
       >
         <div className="space-y-4">
           <p className="text-sm text-text-secondary">
-            Are you sure you want to delete "{selectedProduct?.name}"? This action cannot be undone.
+            Are you sure you want to delete &ldquo;{selectedProduct?.title}&rdquo;? This action
+            cannot be undone.
           </p>
           <div className="flex justify-end gap-3">
             <Button
@@ -277,14 +288,11 @@ const ProductsList: React.FC = () => {
                 setDeleteModalOpen(false);
                 setSelectedProduct(null);
               }}
+              disabled={isDeletingProduct}
             >
               Cancel
             </Button>
-            <Button
-              variant="danger"
-              onClick={confirmDelete}
-              isLoading={isDeletingProduct}
-            >
+            <Button variant="danger" onClick={confirmDelete} isLoading={isDeletingProduct}>
               Delete
             </Button>
           </div>

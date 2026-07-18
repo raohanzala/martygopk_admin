@@ -67,7 +67,7 @@ const FormRowVertical = ({
           <span>{label}</span>
 
           {required && (
-            <span className="text-status-error" aria-label="required">
+            <span className="text-red-500" aria-label="required">
               *
             </span>
           )}
@@ -82,7 +82,7 @@ const FormRowVertical = ({
 
       {error && (
         <div
-          className="flex items-center gap-1 text-xs text-status-error"
+          className="flex items-center gap-1 text-xs text-red-500"
           role="alert"
         >
           <svg

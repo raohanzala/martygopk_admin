@@ -1,27 +1,20 @@
 import React, { createContext, useCallback, useContext, useState } from 'react';
-import {
-  PRODUCT_IMAGE_SLOTS,
-  type ProductImageSlot,
-} from '../utils/buildProductFormData';
-
-type ImageFiles = Partial<Record<ProductImageSlot, File | null>>;
-type ImagePreviews = Partial<Record<ProductImageSlot, string | null>>;
+import type { ProductImage } from '../components/ProductImagesCard';
 
 interface ProductFormContextValue {
-  imageFiles: ImageFiles;
-  imagePreviews: ImagePreviews;
-  setImage: (slot: ProductImageSlot, file: File | null) => void;
-  removeImage: (slot: ProductImageSlot) => void;
+  images: ProductImage[];
+  setImages: (images: ProductImage[]) => void;
 }
 
 const ProductFormContext = createContext<ProductFormContextValue | null>(null);
 
-function urlsToPreviews(urls: string[]): ImagePreviews {
-  const previews: ImagePreviews = {};
-  PRODUCT_IMAGE_SLOTS.forEach((slot, index) => {
-    previews[slot] = urls[index] ?? null;
-  });
-  return previews;
+function urlsToImages(urls: string[]): ProductImage[] {
+  return urls.slice(0, 4).map((url) => ({
+    id: crypto.randomUUID(),
+    preview: url.startsWith('http') || url.startsWith('data:')
+      ? url
+      : `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}${url}`,
+  }));
 }
 
 export function ProductFormProvider({
@@ -31,40 +24,17 @@ export function ProductFormProvider({
   children: React.ReactNode;
   initialImageUrls?: string[];
 }) {
-  const [imageFiles, setImageFiles] = useState<ImageFiles>({});
-  const [imagePreviews, setImagePreviews] = useState<ImagePreviews>(() =>
-    urlsToPreviews(initialImageUrls)
+  const [images, setImages] = useState<ProductImage[]>(() =>
+    urlsToImages(initialImageUrls)
   );
-  const [initialPreviews] = useState(() => urlsToPreviews(initialImageUrls));
 
-  const setImage = useCallback((slot: ProductImageSlot, file: File | null) => {
-    if (!file) {
-      setImageFiles((prev) => ({ ...prev, [slot]: null }));
-      setImagePreviews((prev) => ({
-        ...prev,
-        [slot]: initialPreviews[slot] ?? null,
-      }));
-      return;
-    }
-
-    setImageFiles((prev) => ({ ...prev, [slot]: file }));
-    const reader = new FileReader();
-    reader.onloadend = () =>
-      setImagePreviews((prev) => ({
-        ...prev,
-        [slot]: reader.result as string,
-      }));
-    reader.readAsDataURL(file);
-  }, [initialPreviews]);
-
-  const removeImage = useCallback((slot: ProductImageSlot) => {
-    setImageFiles((prev) => ({ ...prev, [slot]: null }));
-    setImagePreviews((prev) => ({ ...prev, [slot]: null }));
+  const handleSetImages = useCallback((next: ProductImage[]) => {
+    setImages(next.slice(0, 4));
   }, []);
 
   return (
     <ProductFormContext.Provider
-      value={{ imageFiles, imagePreviews, setImage, removeImage }}
+      value={{ images, setImages: handleSetImages }}
     >
       {children}
     </ProductFormContext.Provider>

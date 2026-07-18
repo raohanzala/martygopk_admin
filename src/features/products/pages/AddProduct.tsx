@@ -4,6 +4,7 @@ import ProductForm from '../components/ProductForm';
 import { useAddProduct } from '../hooks/useAddProduct';
 import { useProduct } from '../hooks/useProduct';
 import type { Product } from '../types/product.types';
+import type { ProductFormValues } from '../validation/product.validation';
 import { Spinner } from '@/components';
 
 const AddProduct: React.FC = () => {
@@ -12,14 +13,13 @@ const AddProduct: React.FC = () => {
   const duplicateId = searchParams.get('duplicate');
   const isDuplicate = !!duplicateId;
 
-  const { product: duplicateProduct, isProductLoading: isDuplicateLoading } = useProduct(duplicateId || '');
+  const { product: duplicateProduct, isProductLoading: isDuplicateLoading } =
+    useProduct(duplicateId || '');
   const { addProductMutation, isAddingProduct } = useAddProduct();
 
-  const handleSubmit = async (_values: unknown, formData: FormData) => {
+  const handleSubmit = (_values: ProductFormValues, formData: FormData) => {
     addProductMutation(formData, {
-      onSuccess: () => {
-        navigate('/products');
-      },
+      onSuccess: () => navigate('/products'),
     });
   };
 
@@ -45,6 +45,8 @@ const AddProduct: React.FC = () => {
     );
   }
 
+  // Copy fields for duplicate, clear slug so a unique one is required.
+  // Existing image URLs are shown as previews — re-upload to attach files.
   const initialValues: Product | undefined =
     isDuplicate && duplicateProduct
       ? { ...(duplicateProduct as Product), slug: '' }
@@ -52,8 +54,7 @@ const AddProduct: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
+      {/* <div>
         <button
           onClick={() => navigate('/products')}
           className="text-sm text-text-muted hover:text-text-primary mb-4"
@@ -68,13 +69,13 @@ const AddProduct: React.FC = () => {
             ? 'Review and edit the copied details below, then save to create a new product.'
             : 'Create a new product for your store'}
         </p>
-      </div>
+      </div> */}
 
-      {/* Form */}
       <ProductForm
         initialValues={initialValues}
         onSubmit={handleSubmit}
         isSubmitting={isAddingProduct}
+        submitLabel={isDuplicate ? 'Duplicate product' : 'Create product'}
       />
     </div>
   );
