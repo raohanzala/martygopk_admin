@@ -45,8 +45,6 @@ function ProductFormInner({
     defaultValues: PRODUCT_FORM_DEFAULTS,
   });
 
-  const navigate = useNavigate();
-
   const { reset } = methods;
 
   useEffect(() => {

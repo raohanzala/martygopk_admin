@@ -4,15 +4,15 @@ import {
   IoHomeOutline,
   IoGridOutline,
   IoFolderOutline,
-  IoPricetagOutline,
+  // IoPricetagOutline,
   IoReceiptOutline,
-  IoNewspaperOutline,
-  IoStarOutline,
-  IoMailOutline,
+  // IoNewspaperOutline,
+  // IoStarOutline,
+  // IoMailOutline,
   IoNotificationsOutline,
   IoSettingsOutline,
-  IoPeopleOutline,
-  IoGiftOutline,
+  // IoPeopleOutline,
+  // IoGiftOutline,
 } from 'react-icons/io5';
 import { cn } from '@/utils/cn';
 

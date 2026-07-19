@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useCategories } from '../hooks/useCategories';
 import { useDeleteCategory } from '../hooks/useDeleteCategory';
 import { Table, TableSkeleton, Button, Badge, Card, Modal } from '@/components';
@@ -11,7 +11,6 @@ import {
   IoTrash,
   IoSearchOutline,
   IoImageOutline,
-  IoChevronForward,
   IoStar,
   IoStarOutline,
 } from 'react-icons/io5';

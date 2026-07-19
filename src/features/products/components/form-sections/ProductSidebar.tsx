@@ -6,8 +6,6 @@ import { useCategories } from '@/features/categories/hooks/useCategories';
 import { useBrands } from '@/features/brands/hooks/useBrands';
 import type { ProductFormValues } from '../../validation/product.validation';
 
-const selectClassName =
-  'w-full text-sm px-4 py-[10px] border border-border bg-bg-main text-text-primary rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all duration-200';
 
 const ProductSidebar = () => {
   const { register } = useFormContext<ProductFormValues>();

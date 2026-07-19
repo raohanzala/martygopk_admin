@@ -65,9 +65,6 @@ function slugify(value: string) {
     .replace(/^-|-$/g, "");
 }
 
-const selectClassName =
-  "w-full text-sm px-4 py-[10px] border border-border bg-bg-main text-text-primary rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all duration-200";
-
 interface CategoryFormProps {
   categoryToEdit?: Category | null;
   onSubmit: (values: CategoryFormValues, formData: FormData) => void;

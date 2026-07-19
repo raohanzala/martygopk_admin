@@ -270,7 +270,7 @@ const BlogForm: React.FC<BlogFormProps> = ({
                 </div>
               </Card>
 
-              <Card title="Related Products">
+              {/* <Card title="Related Products">
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-text-primary">
                     Link products to this blog
@@ -297,7 +297,7 @@ const BlogForm: React.FC<BlogFormProps> = ({
                     Hold Ctrl/Cmd to select multiple
                   </p>
                 </div>
-              </Card>
+              </Card> */}
             </div>
           </div>
 
