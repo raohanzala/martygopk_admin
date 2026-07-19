@@ -23,7 +23,7 @@ import ProductMediaSection from "./form-sections/ProductMediaSection";
 import ProductSidebar from "./form-sections/ProductSidebar";
 import SpecificationsSection from "./form-sections/SpecificationsSection";
 import VariantsSection from "./form-sections/VariantsSection";
-import { useNavigate } from "react-router-dom";
+// import { useNavigate } from "react-router-dom";
 
 interface ProductFormProps {
   initialValues?: Product | null;

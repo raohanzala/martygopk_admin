@@ -6,7 +6,7 @@ import { BLOG_CATEGORIES } from '@/api/blogs';
 import type { BlogFormValues } from '../types/blog.types';
 import type { Blog } from '@/api/blogs';
 import { IoImageOutline, IoClose } from 'react-icons/io5';
-import { useProducts } from '@/features/products/hooks/useProducts';
+// import { useProducts } from '@/features/products/hooks/useProducts';
 
 interface BlogFormProps {
   blogToEdit?: Blog | null;
@@ -24,7 +24,7 @@ const BlogForm: React.FC<BlogFormProps> = ({
   const [coverPreview, setCoverPreview] = useState<string | null>(
     blogToEdit?.coverImage?.url || null
   );
-  const { products } = useProducts(undefined, 1, 100);
+  // const { products } = useProducts(undefined, 1, 100);
 
   const initialValues: BlogFormValues = {
     title: blogToEdit?.title || '',
