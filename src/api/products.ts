@@ -118,6 +118,6 @@ export const updateProductApi = async (id: string, data: FormData) => {
 };
 
 export const deleteProductApi = async (id: string) => {
-  const response = await apiClient.delete(`/products/${id}`);
+  const response = await apiClient.delete(`/products/remove/${id}`);
   return response.data;
 };

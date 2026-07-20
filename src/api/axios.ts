@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { store } from '@/store';
+import { logout } from '@/store/slices/authSlice';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002/api';
 
@@ -31,13 +32,13 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    // if (error.response?.status === 401) {
-    //   const isLoginRequest = error.config?.url?.includes('/auth/login');
-    //   if (!isLoginRequest) {
-    //     store.dispatch(logout());
-    //     window.location.href = '/login';
-    //   }
-    // }
+    if (error.response?.status === 401) {
+      const isLoginRequest = error.config?.url?.includes('/auth/login');
+      if (!isLoginRequest) {
+        store.dispatch(logout());
+        window.location.href = '/login';
+      }
+    }
     return Promise.reject(error);
   }
 );
