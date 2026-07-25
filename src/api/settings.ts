@@ -80,7 +80,7 @@ export const getSettingsApi = async () => {
 };
 
 export const updateSettingsApi = async (data: UpdateSettingsInput) => {
-  const response = await apiClient.patch('/settings', data);
+  const response = await apiClient.put('/settings', data);
   return response.data;
 };
 
