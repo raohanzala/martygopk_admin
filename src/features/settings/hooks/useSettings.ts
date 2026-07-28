@@ -11,7 +11,7 @@ export function useSettings() {
     queryKey: ['settings'],
     queryFn: async () => {
       const res = await getSettingsApi();
-      return res.settings;
+      return res.data;
     },
   });
 

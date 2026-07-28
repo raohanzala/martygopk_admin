@@ -30,7 +30,9 @@ export interface SettingsOrder {
 
 export interface SettingsAnnouncement {
   isActive?: boolean;
-  message?: string;
+  title?: string;
+  description?: string;
+  discountPercentage?: number;
   endDate?: string;
   backgroundColor?: string;
   textColor?: string;
