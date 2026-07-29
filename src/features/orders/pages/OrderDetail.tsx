@@ -7,23 +7,24 @@ import { toastSuccess, toastError } from '@/utils/helpers';
 import { IoArrowBack } from 'react-icons/io5';
 
 const STATUS_OPTIONS: OrderStatus[] = [
-  'pending',
-  'paid',
-  'shipped',
-  'delivered',
-  'cancelled',
+  'Order Placed',
+  'Processing',
+  'Shipped',
+  'Delivered',
+  'Canceled',
+  'Refunded'
 ];
 
 function getStatusBadgeVariant(status: OrderStatus): 'default' | 'success' | 'warning' | 'error' | 'info' {
   switch (status) {
-    case 'delivered':
+    case 'Delivered':
       return 'success';
-    case 'shipped':
-    case 'paid':
-      return 'info';
-    case 'cancelled':
+    case 'Shipped':
+    // case 'paid':
+    //   return 'info';
+    case 'Canceled':
       return 'error';
-    case 'pending':
+    case 'Order Placed':
     default:
       return 'warning';
   }
@@ -36,10 +37,10 @@ const OrderDetail: React.FC = () => {
   const { updateStatusMutation, isUpdatingStatus } = useUpdateOrderStatus();
   const [selectedStatus, setSelectedStatus] = useState<OrderStatus | ''>('');
 
-  const hasStatusChange = selectedStatus && selectedStatus !== order?.orderStatus;
+  const hasStatusChange = selectedStatus && selectedStatus !== order?.status;
 
   const handleUpdateStatus = () => {
-    if (!id || !selectedStatus || selectedStatus === order?.orderStatus) return;
+    if (!id || !selectedStatus || selectedStatus === order?.status) return;
     updateStatusMutation(
       { id, orderStatus: selectedStatus as OrderStatus },
       {
@@ -71,8 +72,10 @@ const OrderDetail: React.FC = () => {
     );
   }
 
-  const addr = order.shippingAddress;
-  const displayId = order.orderNumber || order._id.slice(-8).toUpperCase();
+  const addr = order.address;
+  const customer = order.guestUser
+
+  const displayId = order._id.slice(-8).toUpperCase();
 
   return (
     <div className="space-y-6">
@@ -98,8 +101,8 @@ const OrderDetail: React.FC = () => {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant={getStatusBadgeVariant(order.orderStatus)} size="md">
-            {order.orderStatus}
+          <Badge variant={getStatusBadgeVariant(order.status)} size="md">
+            {order.status}
           </Badge>
         </div>
       </div>
@@ -111,7 +114,7 @@ const OrderDetail: React.FC = () => {
         </h2>
         <div className="flex flex-wrap items-center gap-3">
           <select
-            value={selectedStatus || order.orderStatus}
+            value={selectedStatus || order.status}
             onChange={(e) => setSelectedStatus((e.target.value || '') as OrderStatus)}
             className="min-w-[160px] px-3 py-2 rounded border border-border bg-surface text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
           >
@@ -139,16 +142,16 @@ const OrderDetail: React.FC = () => {
           Shipping address
         </h2>
         <div className="text-sm text-text-secondary space-y-1">
-          <p className="font-medium text-text-primary">{addr.fullName}</p>
-          <p>{addr.street}</p>
-          {(addr.area || addr.city) && (
+          <p className="font-medium text-text-primary">{customer.firstName || customer.lastName}</p>
+          <p>{addr.address}</p>
+          {(addr.address || addr.city) && (
             <p>
-              {[addr.area, addr.city, addr.postalCode].filter(Boolean).join(', ')}
+              {[addr.state, addr.city, addr.zipCode].filter(Boolean).join(', ')}
             </p>
           )}
           <p>{addr.country || 'Pakistan'}</p>
-          <p>{addr.email}</p>
-          <p>{addr.phone}</p>
+          <p>{customer.email}</p>
+          <p>{customer.phone}</p>
         </div>
       </Card>
 
@@ -168,16 +171,16 @@ const OrderDetail: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-border">
               {order.items.map((item, idx) => {
-                const variant =
-                  typeof item.productVariantId === 'object'
-                    ? item.productVariantId
-                    : null;
-                const sku = variant?.sku ?? '—';
+                // const variant =
+                //   typeof item.productVariantId === 'object'
+                //     ? item.productVariantId
+                //     : null;
+                // const sku = variant?.sku ?? '—';
                 const subtotal = item.quantity * item.price;
                 return (
                   <tr key={idx}>
                     <td className="py-3 pr-4 text-text-secondary">{idx + 1}</td>
-                    <td className="py-3 pr-4 text-text-primary">{sku}</td>
+                    <td className="py-3 pr-4 text-text-primary">{item.title}</td>
                     <td className="py-3 pr-4 text-right">{item.quantity}</td>
                     <td className="py-3 pr-4 text-right">
                       Rs. {Number(item.price).toLocaleString()}
@@ -195,7 +198,7 @@ const OrderDetail: React.FC = () => {
           <div className="text-right">
             <span className="text-text-secondary mr-2">Total:</span>
             <span className="text-lg font-semibold text-text-primary">
-              Rs. {Number(order.totalAmount).toLocaleString()}
+              Rs. {Number(order.amount).toLocaleString()}
             </span>
           </div>
         </div>

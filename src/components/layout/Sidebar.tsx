@@ -122,7 +122,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           {/* Logo */}
           <div className="flex items-center justify-center px-6 py-5 border-b border-white/10">
 
-            <img src="/src/assets/logo.png" alt="Realtime Wrist Logo" width={100} height={32} className="w-48 h-auto" />
+            <img src="/logo.png" alt="Martygo Logo" width={100} height={32} className="w-48 h-auto" />
             {/* <button
               onClick={onClose}
               className="lg:hidden p-1  rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-colors"

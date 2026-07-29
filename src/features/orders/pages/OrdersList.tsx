@@ -9,33 +9,34 @@ import { IoEyeOutline } from 'react-icons/io5';
 const SEARCH_DEBOUNCE_MS = 400;
 
 const STATUS_OPTIONS: OrderStatus[] = [
-  'pending',
-  'paid',
-  'shipped',
-  'delivered',
-  'cancelled',
+  'Order Placed',
+  'Processing',
+  'Shipped',
+  'Delivered',
+  'Canceled',
+  'Refunded'
 ];
 
 function getStatusBadgeVariant(status: OrderStatus): 'default' | 'success' | 'warning' | 'error' | 'info' {
   switch (status) {
-    case 'delivered':
+    case 'Delivered':
       return 'success';
-    case 'shipped':
-    case 'paid':
-      return 'info';
-    case 'cancelled':
+    case 'Shipped':
+    // case 'paid':
+    //   return 'info';
+    case 'Canceled':
       return 'error';
-    case 'pending':
+    case 'Processing':
     default:
       return 'warning';
   }
 }
 
 function getCustomerDisplay(order: Order): string {
-  const u = order.userId;
+  const u = order.guestUser;
   if (!u) return 'Guest';
   if (typeof u === 'object' && u !== null) {
-    if (u.name) return u.name;
+    if (u.firstName) return u.firstName;
     if (u.email) return u.email;
   }
   return '—';
@@ -69,7 +70,7 @@ const OrdersList: React.FC = () => {
       header: 'Order #',
       render: (item) => (
         <span className="font-medium text-text-primary">
-          {item.orderNumber || item._id.slice(-8).toUpperCase()}
+          {item._id.slice(-8).toUpperCase()}
         </span>
       ),
       width: '140px',
@@ -102,7 +103,7 @@ const OrdersList: React.FC = () => {
       header: 'Total',
       render: (item) => (
         <span className="font-medium text-text-primary">
-          Rs. {Number(item.totalAmount).toLocaleString()}
+          Rs. {Number(item.amount).toLocaleString()}
         </span>
       ),
       width: '100px',
@@ -111,8 +112,8 @@ const OrdersList: React.FC = () => {
       key: 'orderStatus',
       header: 'Status',
       render: (item) => (
-        <Badge variant={getStatusBadgeVariant(item.orderStatus)}>
-          {item.orderStatus}
+        <Badge variant={getStatusBadgeVariant(item.status)}>
+          {item.status}
         </Badge>
       ),
       width: '100px',

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { getSettingsApi } from '@/api/settings';
+import { getSettingsApi, type Settings } from '@/api/settings';
 
 export function useSettings() {
   const {
@@ -15,6 +15,6 @@ export function useSettings() {
     },
   });
 
-  const settings = data;
+  const settings: Settings = data;
   return { settings, isSettingsLoading, settingsError, refetch };
 }
