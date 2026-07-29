@@ -2,8 +2,8 @@ export type {
   Order,
   OrderStatus,
   OrderItem,
-  OrderUser,
-  ShippingAddress,
+  GuestUser,
+  Address,
   OrdersAdminParams,
   OrdersAdminResponse,
 } from '@/api/orders';

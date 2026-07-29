@@ -16,6 +16,7 @@ import {
   settingsFormSchema,
 } from '../validation/settings.validation';
 import { cn } from '@/utils/cn';
+import type { Settings } from '@/api/settings';
 
 const CURRENCY_OPTIONS = [
   { value: 'PKR', label: 'PKR' },
@@ -25,7 +26,7 @@ const CURRENCY_OPTIONS = [
 ];
 
 function settingsToFormValues(
-  settings: Record<string, unknown> | null
+  settings: Settings | null
 ): SettingsFormValues {
   if (!settings) return structuredClone(SETTINGS_FORM_DEFAULTS);
 
@@ -97,9 +98,9 @@ function settingsToFormValues(
 function formValuesToApi(values: SettingsFormValues) {
   const keywords = values.seo.metaKeywords
     ? values.seo.metaKeywords
-        .split(',')
-        .map((k) => k.trim())
-        .filter(Boolean)
+      .split(',')
+      .map((k) => k.trim())
+      .filter(Boolean)
     : [];
 
   return {
@@ -459,9 +460,7 @@ export default function SettingsPage() {
     );
   }
 
-  const initialValues = settingsToFormValues(
-    (settings as Record<string, unknown> | null) ?? null
-  );
+  const initialValues = settingsToFormValues(settings)
 
   return (
     <div className="space-y-6">
