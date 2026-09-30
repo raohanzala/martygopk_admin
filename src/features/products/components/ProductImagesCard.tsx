@@ -135,13 +135,31 @@ const ProductImagesCard = ({ images, onImagesChange }: Props) => {
   };
 
   const removeImage = (id: string) => {
-    onImagesChange(images.filter((img) => img.id !== id));
+
+    const currentImages = imagesRef.current;
+
+    const nextImages = currentImages.filter(
+      (image) => image.id !== id
+    );
+
+    imagesRef.current = nextImages;
+    onImagesChange(nextImages);
   };
 
   const makeFeatured = (id: string) => {
-    const featured = images.find((i) => i.id === id);
+    const currentImages = imagesRef.current;
+
+    const featured = currentImages.find((image) => image.id === id);
+
     if (!featured) return;
-    onImagesChange([featured, ...images.filter((i) => i.id !== id)]);
+
+    const nextImages = [
+      featured,
+      ...currentImages.filter((image) => image.id !== id),
+    ];
+
+    imagesRef.current = nextImages;
+    onImagesChange(nextImages);
   };
 
   return (

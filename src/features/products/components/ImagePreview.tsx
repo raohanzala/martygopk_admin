@@ -50,6 +50,7 @@ const ImagePreview = ({
           flex
           h-9
           w-9
+          z-30
           items-center
           justify-center
           rounded-full
